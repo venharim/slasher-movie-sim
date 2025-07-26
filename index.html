@@ -606,6 +606,35 @@
             transition: width 0.5s ease;
         }
 
+        /* Relationship System Styles */
+        .relationship-highlight {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 2px solid #4CAF50;
+        }
+
+        .relationship-pair {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .relationship-selector {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+
         @media (max-width: 768px) {
             .cast-grid {
                 grid-template-columns: 1fr;
@@ -646,6 +675,10 @@
             <h1>💀 SLASHER MOVIE SIMULATOR 💀</h1>
             <div class="subtitle">Inspired by the Slasher genre</div>
             <div class="tagline">The killer is among us...</div>
+            <div style="background: rgba(76, 175, 80, 0.2); padding: 10px; border-radius: 8px; margin-top: 15px; border: 2px solid #4CAF50;">
+                <span style="color: #4CAF50; font-weight: bold; font-size: 1.1rem;">🔗 NOW WITH RELATIONSHIP SYSTEM!</span>
+                <div style="color: #ccc; font-size: 0.9rem; margin-top: 5px;">Define romantic couples, best friends, enemies & family bonds that affect survival!</div>
+            </div>
         </div>
 
         <div id="setup-screen">
@@ -687,13 +720,16 @@
                 </div>
                 <button class="btn" onclick="setupCast()" id="create-cast-btn">Create Cast</button>
                 <button class="btn btn-secondary" onclick="alert('Test button works!')" style="margin-left: 10px;">Test Button</button>
+                <button class="btn" onclick="testRelationshipSystem()" style="margin-left: 10px; background: #4CAF50;">🔗 Test Relationships</button>
             </div>
 
             <div id="cast-customization" class="section hidden">
                 <h2>Cast Customization</h2>
+                <div style="background: rgba(76, 175, 80, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #4CAF50;">
+                    <h3 style="color: #4CAF50; margin-bottom: 10px;">🔗 NEW: Relationship System Available!</h3>
+                    <p style="color: #ccc; margin: 0;">After customizing your characters, you can define relationships between them (romantic couples, best friends, enemies, etc.) that will affect the story, survival chances, and dialogue!</p>
+                </div>
                 <div id="cast-container" class="cast-grid"></div>
-                <button class="btn" onclick="startMovie()">Start Horror Movie</button>
-                <button class="btn btn-secondary" onclick="randomizeCast()">Randomize All</button>
             </div>
         </div>
 
@@ -857,7 +893,8 @@
             autoPlay: false,
             movieComplete: false,
             storyQueue: [],
-            currentStoryIndex: 0
+            currentStoryIndex: 0,
+            relationships: new Map() // Track all character relationships
         };
 
         // Franchise history tracking
@@ -865,6 +902,67 @@
             movies: [],
             allCharacters: new Map() // Map character names to their info across movies
         };
+
+        // Relationship System
+        const relationshipTypes = {
+            ROMANTIC: { name: 'Romantic Couple', emoji: '💕', survivalBonus: 2, loyaltyBonus: 3 },
+            BEST_FRIENDS: { name: 'Best Friends', emoji: '👥', survivalBonus: 1, loyaltyBonus: 2 },
+            FAMILY: { name: 'Family', emoji: '👪', survivalBonus: 2, loyaltyBonus: 3 },
+            ENEMIES: { name: 'Enemies', emoji: '⚔️', survivalBonus: -1, loyaltyBonus: -2 },
+            EX_LOVERS: { name: 'Ex-Lovers', emoji: '💔', survivalBonus: -1, loyaltyBonus: -1 },
+            NEUTRAL: { name: 'Neutral', emoji: '🤝', survivalBonus: 0, loyaltyBonus: 0 }
+        };
+
+        // Relationship helper functions
+        function createRelationship(char1, char2, type) {
+            const key = `${Math.min(char1.id, char2.id)}-${Math.max(char1.id, char2.id)}`;
+            gameState.relationships.set(key, {
+                characters: [char1.id, char2.id],
+                type: type,
+                strength: Math.floor(Math.random() * 3) + 3, // 3-5 strength
+                history: []
+            });
+        }
+
+        function getRelationship(char1, char2) {
+            const key = `${Math.min(char1.id, char2.id)}-${Math.max(char1.id, char2.id)}`;
+            return gameState.relationships.get(key);
+        }
+
+        function getCharacterRelationships(character) {
+            const relationships = [];
+            gameState.relationships.forEach((rel, key) => {
+                if (rel.characters.includes(character.id)) {
+                    const otherId = rel.characters.find(id => id !== character.id);
+                    const otherChar = gameState.characters.find(c => c.id === otherId);
+                    if (otherChar) {
+                        relationships.push({ character: otherChar, relationship: rel });
+                    }
+                }
+            });
+            return relationships;
+        }
+
+        function findCharactersByRelationType(type) {
+            const pairs = [];
+            gameState.relationships.forEach((rel, key) => {
+                if (rel.type === type) {
+                    const char1 = gameState.characters.find(c => c.id === rel.characters[0]);
+                    const char2 = gameState.characters.find(c => c.id === rel.characters[1]);
+                    if (char1 && char2) {
+                        pairs.push([char1, char2]);
+                    }
+                }
+            });
+            return pairs;
+        }
+
+        function testRelationshipSystem() {
+            alert('🔗 Relationship System Test!\n\nTo see the full relationship system:\n\n1. Click "Create Cast" button\n2. Customize your characters\n3. Look for "Setup Relationships & Start Movie" button\n4. Click it to see the relationship setup screen!\n\nThe relationship system adds:\n💕 Romantic couples\n👥 Best friends\n👪 Family bonds\n⚔️ Enemies\n💔 Ex-lovers\n\nThese affect survival chances, dialogue, and story events!');
+            
+            // Quick demo of relationship types
+            console.log('Available relationship types:', relationshipTypes);
+        }
 
         // Audio System
         let audioContext;
@@ -1310,6 +1408,192 @@
                 container.appendChild(card);
             });
             
+            // Update the buttons at the bottom of cast customization - make this more robust
+            const castContainer = document.getElementById('cast-container');
+            if (castContainer && castContainer.parentNode) {
+                // Remove any existing button container
+                const existingButtons = castContainer.parentNode.querySelector('.cast-buttons');
+                if (existingButtons) {
+                    existingButtons.remove();
+                }
+                
+                // Create new button container
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'cast-buttons';
+                buttonContainer.style.textAlign = 'center';
+                buttonContainer.style.marginTop = '30px';
+                buttonContainer.innerHTML = `
+                    <button class="btn" onclick="showRelationshipSetup()" style="background: linear-gradient(135deg, #4CAF50, #45a049); font-size: 18px; padding: 20px 30px;">
+                        🔗 Setup Relationships & Start Movie
+                    </button>
+                    <br><br>
+                    <button class="btn btn-secondary" onclick="randomizeCast()" style="margin: 5px;">🎲 Randomize All Stats</button>
+                    <button class="btn btn-secondary" onclick="startMovie()" style="margin: 5px;">⏩ Skip Relationships & Start</button>
+                `;
+                
+                // Insert after cast container
+                castContainer.parentNode.insertBefore(buttonContainer, castContainer.nextSibling);
+            }
+            
+            document.getElementById('cast-customization').classList.remove('hidden');
+        }
+
+        function showRelationshipSetup() {
+            // Hide cast customization and show relationship setup
+            document.getElementById('cast-customization').classList.add('hidden');
+            
+            // Create relationship setup screen
+            const setupScreen = document.createElement('div');
+            setupScreen.id = 'relationship-setup';
+            setupScreen.className = 'section';
+            setupScreen.innerHTML = `
+                <h2>Relationship Setup</h2>
+                <p style="color: #ccc; margin-bottom: 20px;">Define relationships between characters. These will affect survival chances, dialogue, and story events!</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn" onclick="generateRandomRelationships()">🎲 Generate Random Relationships</button>
+                    <button class="btn btn-secondary" onclick="clearAllRelationships()">🧹 Clear All</button>
+                </div>
+                
+                <div id="relationship-pairs" style="display: grid; gap: 15px; margin-bottom: 20px;"></div>
+                
+                <div style="text-align: center;">
+                    <button class="btn" onclick="finishRelationshipSetup()">Continue to Movie</button>
+                    <button class="btn btn-secondary" onclick="backToCastCustomization()">Back to Cast</button>
+                </div>
+            `;
+            
+            // Insert after cast customization
+            const castCustomization = document.getElementById('cast-customization');
+            castCustomization.parentNode.insertBefore(setupScreen, castCustomization.nextSibling);
+            
+            displayRelationshipPairs();
+        }
+
+        function displayRelationshipPairs() {
+            const container = document.getElementById('relationship-pairs');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Generate all possible character pairs
+            const characters = gameState.characters;
+            for (let i = 0; i < characters.length; i++) {
+                for (let j = i + 1; j < characters.length; j++) {
+                    const char1 = characters[i];
+                    const char2 = characters[j];
+                    const existingRel = getRelationship(char1, char2);
+                    
+                    const pairDiv = document.createElement('div');
+                    pairDiv.className = 'relationship-pair';
+                    
+                    pairDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="color: #fff; font-weight: bold;">
+                                ${char1.name} & ${char2.name}
+                            </span>
+                            <small style="color: #ccc;">
+                                ${char1.archetype.name} & ${char2.archetype.name}
+                            </small>
+                        </div>
+                        <select class="relationship-selector" onchange="setRelationship(${char1.id}, ${char2.id}, this.value)">
+                            <option value="NEUTRAL" ${(!existingRel || existingRel.type === relationshipTypes.NEUTRAL) ? 'selected' : ''}>
+                                🤝 Neutral
+                            </option>
+                            <option value="ROMANTIC" ${(existingRel && existingRel.type === relationshipTypes.ROMANTIC) ? 'selected' : ''}>
+                                💕 Romantic Couple
+                            </option>
+                            <option value="BEST_FRIENDS" ${(existingRel && existingRel.type === relationshipTypes.BEST_FRIENDS) ? 'selected' : ''}>
+                                👥 Best Friends
+                            </option>
+                            <option value="FAMILY" ${(existingRel && existingRel.type === relationshipTypes.FAMILY) ? 'selected' : ''}>
+                                👪 Family
+                            </option>
+                            <option value="ENEMIES" ${(existingRel && existingRel.type === relationshipTypes.ENEMIES) ? 'selected' : ''}>
+                                ⚔️ Enemies
+                            </option>
+                            <option value="EX_LOVERS" ${(existingRel && existingRel.type === relationshipTypes.EX_LOVERS) ? 'selected' : ''}>
+                                💔 Ex-Lovers
+                            </option>
+                        </select>
+                    `;
+                    
+                    container.appendChild(pairDiv);
+                }
+            }
+        }
+
+        function setRelationship(char1Id, char2Id, relationshipKey) {
+            const char1 = gameState.characters.find(c => c.id === char1Id);
+            const char2 = gameState.characters.find(c => c.id === char2Id);
+            const relType = relationshipTypes[relationshipKey];
+            
+            if (char1 && char2 && relType) {
+                createRelationship(char1, char2, relType);
+            }
+        }
+
+        function generateRandomRelationships() {
+            // Clear existing relationships
+            gameState.relationships.clear();
+            
+            const characters = gameState.characters;
+            const relationshipKeys = Object.keys(relationshipTypes);
+            
+            // Ensure at least one romantic couple and one pair of best friends
+            if (characters.length >= 2) {
+                const couple = [characters[0], characters[1]];
+                createRelationship(couple[0], couple[1], relationshipTypes.ROMANTIC);
+            }
+            
+            if (characters.length >= 4) {
+                const friends = [characters[2], characters[3]];
+                createRelationship(friends[0], friends[1], relationshipTypes.BEST_FRIENDS);
+            }
+            
+            // Add random relationships for remaining pairs
+            for (let i = 0; i < characters.length; i++) {
+                for (let j = i + 1; j < characters.length; j++) {
+                    const char1 = characters[i];
+                    const char2 = characters[j];
+                    
+                    if (!getRelationship(char1, char2)) {
+                        // 60% chance of neutral, 40% chance of special relationship
+                        if (Math.random() < 0.6) {
+                            createRelationship(char1, char2, relationshipTypes.NEUTRAL);
+                        } else {
+                            const randomKey = relationshipKeys[Math.floor(Math.random() * relationshipKeys.length)];
+                            createRelationship(char1, char2, relationshipTypes[randomKey]);
+                        }
+                    }
+                }
+            }
+            
+            displayRelationshipPairs();
+        }
+
+        function clearAllRelationships() {
+            gameState.relationships.clear();
+            displayRelationshipPairs();
+        }
+
+        function finishRelationshipSetup() {
+            // Remove relationship setup screen
+            const setupScreen = document.getElementById('relationship-setup');
+            if (setupScreen) {
+                setupScreen.remove();
+            }
+            
+            // Continue to movie
+            startMovie();
+        }
+
+        function backToCastCustomization() {
+            // Remove relationship setup screen and show cast customization
+            const setupScreen = document.getElementById('relationship-setup');
+            if (setupScreen) {
+                setupScreen.remove();
+            }
             document.getElementById('cast-customization').classList.remove('hidden');
         }
 
@@ -1345,6 +1629,12 @@
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('movie-screen').classList.remove('hidden');
             document.getElementById('current-movie-title').textContent = gameState.movieTitle;
+            
+            // Remove any relationship setup screen that might still be visible
+            const setupScreen = document.getElementById('relationship-setup');
+            if (setupScreen) {
+                setupScreen.remove();
+            }
             
             if (gameState.isKillerMode) {
                 document.getElementById('killer-controls').classList.remove('hidden');
@@ -1499,67 +1789,119 @@
             const victim = gameState.characters.find(c => c.id === victimId);
             if (!victim || victim.status !== 'Alive') return;
             
-            // Calculate success chance based on victim's stats
+            // Calculate success chance based on victim's stats and relationships
             const victimDefense = victim.stats.survival + victim.stats.stealth + victim.stats.athletics;
+            
+            // Check for relationship bonuses
+            let relationshipBonus = 0;
+            const victimRelationships = getCharacterRelationships(victim);
+            victimRelationships.forEach(rel => {
+                if (rel.character.status === 'Alive' && !gameState.killers.includes(rel.character)) {
+                    relationshipBonus += rel.relationship.type.survivalBonus;
+                }
+            });
+            
             const baseSuccessChance = 70; // Base 70% chance
             const statModifier = (30 - victimDefense) * 2; // High stat victims are harder to kill
-            const finalChance = Math.max(30, Math.min(95, baseSuccessChance + statModifier));
+            const relModifier = relationshipBonus * 5; // Relationships can provide up to +15% survival
+            const finalChance = Math.max(30, Math.min(95, baseSuccessChance + statModifier - relModifier));
             
             const success = Math.random() * 100 < finalChance;
             
             if (success) {
-                // Successful kill
-                const killMethods = [
-                    'You catch them alone in the kitchen and strike with a knife.',
-                    'You corner them in the basement - nowhere to run.',
-                    'A perfect ambush from the shadows.',
-                    'You lure them outside and finish them quickly.',
-                    'They never saw it coming in the dark hallway.',
-                    'A classic horror movie kill in the bathroom.',
-                    'You catch them trying to escape through a window.',
-                    'You strike while they\'re distracted on their phone.',
-                    'The perfect moment presents itself and you seize it.',
-                    'You use their own trust against them.'
-                ];
+                // Successful kill - check for relationship-specific death scenarios
+                const victimRelationships = getCharacterRelationships(victim);
+                const partnerRel = victimRelationships.find(rel => 
+                    rel.relationship.type === relationshipTypes.ROMANTIC && rel.character.status === 'Alive'
+                );
+                const bestFriendRel = victimRelationships.find(rel => 
+                    rel.relationship.type === relationshipTypes.BEST_FRIENDS && rel.character.status === 'Alive'
+                );
+                const familyRel = victimRelationships.find(rel => 
+                    rel.relationship.type === relationshipTypes.FAMILY && rel.character.status === 'Alive'
+                );
                 
-                const method = killMethods[Math.floor(Math.random() * killMethods.length)];
-                addEvent('death', `💀 KILLER STRIKE: ${method}`);
+                let killMethod, lastWords;
                 
-                const victimLastWords = [
-                    `"Wait... ${gameState.killerPlayer.name}?!" - ${victim.name}, shocked`,
-                    `"I should have trusted my instincts about you!" - ${victim.name}`,
-                    `"This is for what exactly?!" - ${victim.name}, confused`,
-                    `"I can't believe it was you all along!" - ${victim.name}`,
-                    `"But I thought we were friends!" - ${victim.name}, betrayed`,
-                    `"You're insane!" - ${victim.name}, terrified`
-                ];
+                if (partnerRel && Math.random() < 0.6) {
+                    // Romantic death scenario
+                    const partner = partnerRel.character;
+                    killMethod = `You catch ${victim.name} alone while they were trying to find ${partner.name}. Love makes people vulnerable.`;
+                    lastWords = `"Tell ${partner.name}... I love them..." - ${victim.name}, with their final breath`;
+                } else if (bestFriendRel && Math.random() < 0.5) {
+                    // Best friend death scenario
+                    const friend = bestFriendRel.character;
+                    killMethod = `You strike while ${victim.name} is distracted worrying about ${friend.name}'s safety.`;
+                    lastWords = `"${friend.name}... watch out for..." - ${victim.name}, trying to warn their friend`;
+                } else if (familyRel && Math.random() < 0.5) {
+                    // Family death scenario
+                    const family = familyRel.character;
+                    killMethod = `You exploit ${victim.name}'s protective instincts when they hear ${family.name} in danger.`;
+                    lastWords = `"Keep ${family.name} safe... promise me..." - ${victim.name}, pleading`;
+                } else {
+                    // Standard kill methods
+                    const killMethods = [
+                        'You catch them alone in the kitchen and strike with a knife.',
+                        'You corner them in the basement - nowhere to run.',
+                        'A perfect ambush from the shadows.',
+                        'You lure them outside and finish them quickly.',
+                        'They never saw it coming in the dark hallway.'
+                    ];
+                    killMethod = killMethods[Math.floor(Math.random() * killMethods.length)];
+                    lastWords = `"Wait... ${gameState.killerPlayer.name}?!" - ${victim.name}, shocked`;
+                }
                 
-                addEvent('dialogue', victimLastWords[Math.floor(Math.random() * victimLastWords.length)]);
+                addEvent('death', `💀 KILLER STRIKE: ${killMethod}`);
+                addEvent('dialogue', lastWords);
                 killCharacter(victim, gameState.killerPlayer, gameState.currentAct);
+                
+                // Add relationship-specific reactions from survivors
+                setTimeout(() => {
+                    addRelationshipReactions(victim, 'death');
+                }, 1000);
                 
                 addEvent('killer-thought', `You feel a rush of adrenaline. The kill was clean and efficient.`);
                 
             } else {
-                // Failed attempt - victim escapes
-                const escapeScenarios = [
-                    `You attack ${victim.name} but they fight back and escape!`,
-                    `${victim.name} spots you coming and runs screaming!`,
-                    `Your strike misses and ${victim.name} kicks you, then flees!`,
-                    `${victim.name} throws something at you and bolts through a window!`,
-                    `${victim.name} dodges your attack and alerts the others!`
-                ];
+                // Failed attempt - victim escapes, possibly with help from relationships
+                const victimRelationships = getCharacterRelationships(victim);
+                const nearbyAlly = victimRelationships.find(rel => 
+                    rel.character.status === 'Alive' && 
+                    !gameState.killers.includes(rel.character) &&
+                    (rel.relationship.type === relationshipTypes.ROMANTIC || 
+                     rel.relationship.type === relationshipTypes.BEST_FRIENDS ||
+                     rel.relationship.type === relationshipTypes.FAMILY)
+                );
                 
-                const scenario = escapeScenarios[Math.floor(Math.random() * escapeScenarios.length)];
-                addEvent('attack', `⚠️ FAILED KILL ATTEMPT: ${scenario}`);
+                let escapeScenario;
+                if (nearbyAlly && Math.random() < 0.4) {
+                    const ally = nearbyAlly.character;
+                    escapeScenario = `You attack ${victim.name} but ${ally.name} appears and helps them escape!`;
+                    
+                    setTimeout(() => {
+                        addEvent('dialogue', `"I heard you scream! Are you okay?!" - ${ally.name}, rushing to help`);
+                        addEvent('dialogue', `"${gameState.killerPlayer.name} IS THE KILLER! They just tried to kill me!" - ${victim.name}`);
+                    }, 500);
+                } else {
+                    const escapeScenarios = [
+                        `You attack ${victim.name} but they fight back and escape!`,
+                        `${victim.name} spots you coming and runs screaming!`,
+                        `Your strike misses and ${victim.name} kicks you, then flees!`
+                    ];
+                    escapeScenario = escapeScenarios[Math.floor(Math.random() * escapeScenarios.length)];
+                    
+                    setTimeout(() => {
+                        addEvent('dialogue', `"${gameState.killerPlayer.name} IS THE KILLER! RUN!" - ${victim.name}`);
+                    }, 500);
+                }
                 
-                const escapeLines = [
-                    `"${gameState.killerPlayer.name} IS THE KILLER! RUN!" - ${victim.name}`,
-                    `"I KNEW IT! ${gameState.killerPlayer.name} JUST TRIED TO KILL ME!" - ${victim.name}`,
-                    `"HELP! ${gameState.killerPlayer.name} HAS LOST IT!" - ${victim.name}`
-                ];
-                
-                addEvent('dialogue', escapeLines[Math.floor(Math.random() * escapeLines.length)]);
+                addEvent('attack', `⚠️ FAILED KILL ATTEMPT: ${escapeScenario}`);
                 attackCharacter(victim, gameState.currentAct);
+                
+                // Add relationship reactions to the attack
+                setTimeout(() => {
+                    addRelationshipReactions(victim, 'attack');
+                }, 1000);
                 
                 // Reveal killer to everyone if attack fails
                 addEvent('reveal', `🎭 Your identity as the killer has been exposed! The survivors know it's you!`);
@@ -1595,6 +1937,43 @@
             setTimeout(() => {
                 continueStory();
             }, 2000);
+        }
+
+        function addRelationshipReactions(victim, eventType) {
+            const victimRelationships = getCharacterRelationships(victim);
+            const aliveRelationships = victimRelationships.filter(rel => 
+                rel.character.status === 'Alive' && !gameState.killers.includes(rel.character)
+            );
+            
+            aliveRelationships.forEach(rel => {
+                const reactor = rel.character;
+                const relType = rel.relationship.type;
+                
+                let reaction;
+                if (eventType === 'death') {
+                    if (relType === relationshipTypes.ROMANTIC) {
+                        reaction = `"NO! ${victim.name}! My love... this can't be happening!" - ${reactor.name}, devastated`;
+                    } else if (relType === relationshipTypes.BEST_FRIENDS) {
+                        reaction = `"${victim.name} was my best friend! I'll never forgive whoever did this!" - ${reactor.name}, furious`;
+                    } else if (relType === relationshipTypes.FAMILY) {
+                        reaction = `"They killed my family... ${victim.name}... this is unforgivable!" - ${reactor.name}, grief-stricken`;
+                    } else if (relType === relationshipTypes.ENEMIES) {
+                        reaction = `"I may have hated ${victim.name}, but they didn't deserve this..." - ${reactor.name}, conflicted`;
+                    }
+                } else if (eventType === 'attack') {
+                    if (relType === relationshipTypes.ROMANTIC) {
+                        reaction = `"Are you hurt?! I can't lose you!" - ${reactor.name}, checking on ${victim.name}`;
+                    } else if (relType === relationshipTypes.BEST_FRIENDS) {
+                        reaction = `"Thank god you're alive! I was so scared!" - ${reactor.name}, relieved`;
+                    } else if (relType === relationshipTypes.FAMILY) {
+                        reaction = `"Stay close to me. I won't let anything happen to you." - ${reactor.name}, protective`;
+                    }
+                }
+                
+                if (reaction) {
+                    addEvent('dialogue', reaction);
+                }
+            });
         }
 
         function showKillTargets() {
@@ -1994,57 +2373,183 @@
             const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
             if (aliveCharacters.length === 0) return;
             
-            const victim = aliveCharacters[Math.floor(Math.random() * aliveCharacters.length)];
+            // 40% chance to target based on relationships (isolation, revenge, etc.)
+            let victim;
+            if (Math.random() < 0.4) {
+                victim = selectRelationshipBasedVictim(aliveCharacters);
+            }
+            
+            // Fallback to random selection
+            if (!victim) {
+                victim = aliveCharacters[Math.floor(Math.random() * aliveCharacters.length)];
+            }
+            
             const killer = gameState.killers[Math.floor(Math.random() * gameState.killers.length)];
             
+            // Get relationship-specific kill scenario
+            const killScenario = getRelationshipAwareKillScenario(victim, killer);
+            addEvent('death', `💀 ${killScenario}`);
+            
+            // Get relationship-specific final words
+            const finalWords = getRelationshipAwareFinalWords(victim, killer);
+            addEvent('dialogue', finalWords);
+            
+            killCharacter(victim, killer, gameState.currentAct);
+            
+            // Add relationship reactions
+            setTimeout(() => {
+                addRelationshipReactions(victim, 'death');
+            }, 1000);
+        }
+
+        function selectRelationshipBasedVictim(aliveCharacters) {
+            // Strategy 1: Target isolated characters (those with fewer strong relationships)
+            const isolatedChars = aliveCharacters.filter(char => {
+                const relationships = getCharacterRelationships(char);
+                const strongRels = relationships.filter(rel => 
+                    rel.character.status === 'Alive' && 
+                    (rel.relationship.type === relationshipTypes.ROMANTIC || 
+                     rel.relationship.type === relationshipTypes.BEST_FRIENDS ||
+                     rel.relationship.type === relationshipTypes.FAMILY)
+                );
+                return strongRels.length <= 1; // 1 or fewer strong relationships
+            });
+            
+            if (isolatedChars.length > 0 && Math.random() < 0.6) {
+                return isolatedChars[Math.floor(Math.random() * isolatedChars.length)];
+            }
+            
+            // Strategy 2: Target someone with enemies (easier to frame/less sympathy)
+            const charsWithEnemies = aliveCharacters.filter(char => {
+                const relationships = getCharacterRelationships(char);
+                return relationships.some(rel => 
+                    rel.character.status === 'Alive' && 
+                    rel.relationship.type === relationshipTypes.ENEMIES
+                );
+            });
+            
+            if (charsWithEnemies.length > 0 && Math.random() < 0.3) {
+                return charsWithEnemies[Math.floor(Math.random() * charsWithEnemies.length)];
+            }
+            
+            // Strategy 3: Target to cause maximum emotional damage (kill someone's loved one)
+            const romanticTargets = [];
+            findCharactersByRelationType(relationshipTypes.ROMANTIC).forEach(pair => {
+                if (pair[0].status === 'Alive' && pair[1].status === 'Alive') {
+                    if (aliveCharacters.includes(pair[0])) romanticTargets.push(pair[0]);
+                    if (aliveCharacters.includes(pair[1])) romanticTargets.push(pair[1]);
+                }
+            });
+            
+            if (romanticTargets.length > 0 && Math.random() < 0.4) {
+                return romanticTargets[Math.floor(Math.random() * romanticTargets.length)];
+            }
+            
+            return null; // No strategic target found, use random
+        }
+
+        function getRelationshipAwareKillScenario(victim, killer) {
+            const victimRelationships = getCharacterRelationships(victim);
+            const partnerRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.ROMANTIC && rel.character.status === 'Alive'
+            );
+            const bestFriendRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.BEST_FRIENDS && rel.character.status === 'Alive'
+            );
+            const enemyRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.ENEMIES && rel.character.status === 'Alive'
+            );
+            const familyRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.FAMILY && rel.character.status === 'Alive'
+            );
+            
+            // Relationship-specific kill scenarios
+            if (partnerRel && Math.random() < 0.5) {
+                const partner = partnerRel.character;
+                return `${victim.name} is looking for ${partner.name} when the killer strikes. Love blinds them to the danger lurking in the shadows.`;
+            }
+            
+            if (bestFriendRel && Math.random() < 0.4) {
+                const friend = bestFriendRel.character;
+                return `${victim.name} goes to warn ${friend.name} about the danger, but walks straight into the killer's trap.`;
+            }
+            
+            if (familyRel && Math.random() < 0.4) {
+                const family = familyRel.character;
+                return `${victim.name} hears ${family.name} calling for help and rushes to save them - right into the killer's arms.`;
+            }
+            
+            if (enemyRel && Math.random() < 0.3) {
+                const enemy = enemyRel.character;
+                return `${victim.name} is found dead with evidence pointing to ${enemy.name}. The perfect frame job.`;
+            }
+            
+            // Fallback to original scenarios
             const killScenarios = [
                 `${victim.name} goes to the basement to check the breaker box when the lights go out. "Great, just great," they mutter, fumbling with their phone flashlight. The killer appears behind them with a nail gun - THUNK THUNK THUNK!`,
                 `${victim.name} is making popcorn in the kitchen when they hear the microwave beeping weirdly. They open it to find a bloody note that says "YOU'RE NEXT." Suddenly, the killer grabs them from behind and shoves their head into the garbage disposal.`,
                 `${victim.name} decides to "split up to cover more ground" (classic mistake). They're searching the attic when a floorboard creaks. "Hello?" The killer drops down from the rafters and strangles them with Christmas lights.`,
                 `${victim.name} is in the bathroom applying lipgloss when they notice in the mirror that the shower curtain is moving. "Very funny, guys!" The killer bursts out and drowns them in the toilet.`,
-                `${victim.name} goes outside to get something from their car. The killer pops out of the backseat like a jack-in-the-box and beheads them with a machete. Their head rolls under the car and their body slumps against the horn - HOOOOONK!`,
-                `${victim.name} is in bed scrolling TikTok when they hear footsteps upstairs. "Must be the cat," they say, even though they don't have a cat. The killer crashes through the ceiling and impales them with a flagpole.`,
-                `${victim.name} is doing dishes when they notice all the knives are missing from the knife block. "That's weird..." they say, turning around to find the killer juggling them. The juggling act ends with all the knives in ${victim.name}.`,
-                `${victim.name} decides to hide in a closet after hearing strange noises. "This is just like hide and seek," they whisper. The killer finds them and turns it into "hide and SHRIEK" with a power drill.`,
-                `${victim.name} is taking selfies in the bathroom when they notice someone in the background of their photos. They turn around and the killer photobombs their life... permanently, with a sledgehammer.`,
-                `${victim.name} goes to the kitchen for a midnight snack and finds a trail of rose petals. "Aww, how romantic!" they follow the trail... straight into a bear trap. The killer emerges clapping slowly.`,
-                `${victim.name} is playing video games with headphones on, completely oblivious. They're so focused on their game that they don't notice the killer standing behind them until it's GAME OVER - literally.`,
-                `${victim.name} decides to take a relaxing bath. They light candles, pour bubbles, and settle in. The killer drops a plugged-in toaster into the water. Bath time becomes shock therapy.`,
-                `${victim.name} is reorganizing the tool shed when they hear the door slam shut behind them. "Hello? This isn't funny!" The killer has turned the shed into a house of horrors with every tool as a weapon.`,
-                `${victim.name} is doing yoga in the living room when they get stuck in a difficult pose. The killer seizes the opportunity and turns downward dog into permanent sleep with a yoga block to the skull.`,
-                `${victim.name} is making a sandwich when they realize the mayo looks weird. They taste it. "This isn't mayo..." It's poison. The killer watches from the doorway as ${victim.name} foams at the mouth.`,
-                `${victim.name} is watching a horror movie alone and keeps shouting "Don't go in there!" at the screen. Ironically, they get up to investigate a noise in the basement. The killer appreciates the irony.`
+                `${victim.name} goes outside to get something from their car. The killer pops out of the backseat like a jack-in-the-box and beheads them with a machete. Their head rolls under the car and their body slumps against the horn - HOOOOONK!`
             ];
             
-            const scenario = killScenarios[Math.floor(Math.random() * killScenarios.length)];
-            addEvent('death', `💀 ${scenario}`);
+            return killScenarios[Math.floor(Math.random() * killScenarios.length)];
+        }
+
+        function getRelationshipAwareFinalWords(victim, killer) {
+            const victimRelationships = getCharacterRelationships(victim);
+            const partnerRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.ROMANTIC && rel.character.status === 'Alive'
+            );
+            const bestFriendRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.BEST_FRIENDS && rel.character.status === 'Alive'
+            );
+            const familyRel = victimRelationships.find(rel => 
+                rel.relationship.type === relationshipTypes.FAMILY && rel.character.status === 'Alive'
+            );
             
+            // Relationship-specific final words
+            if (partnerRel && Math.random() < 0.6) {
+                const partner = partnerRel.character;
+                const romanticLastWords = [
+                    `"Tell ${partner.name}... I love them... always..." - ${victim.name}, with their dying breath`,
+                    `"${partner.name}... I'm sorry... we'll never get that happy ending..." - ${victim.name}, tears in their eyes`,
+                    `"Promise me... you'll keep ${partner.name} safe..." - ${victim.name}, looking at the killer`,
+                    `"${partner.name} and I... we were going to... get married..." - ${victim.name}, fading away`
+                ];
+                return romanticLastWords[Math.floor(Math.random() * romanticLastWords.length)];
+            }
+            
+            if (bestFriendRel && Math.random() < 0.5) {
+                const friend = bestFriendRel.character;
+                const friendLastWords = [
+                    `"Tell ${friend.name}... our friendship... meant everything..." - ${victim.name}, smiling weakly`,
+                    `"${friend.name} will figure this out... they're too smart..." - ${victim.name}, confident`,
+                    `"Don't hurt ${friend.name}... they're the best person I know..." - ${victim.name}, pleading`
+                ];
+                return friendLastWords[Math.floor(Math.random() * friendLastWords.length)];
+            }
+            
+            if (familyRel && Math.random() < 0.5) {
+                const family = familyRel.character;
+                const familyLastWords = [
+                    `"Keep ${family.name} safe... they're all I have left..." - ${victim.name}, desperate`,
+                    `"Tell ${family.name}... I'm proud to be their family..." - ${victim.name}, peaceful`,
+                    `"${family.name}... I'll see you again someday..." - ${victim.name}, hopeful`
+                ];
+                return familyLastWords[Math.floor(Math.random() * familyLastWords.length)];
+            }
+            
+            // Fallback to original final words
             const finalWords = [
                 `"Wait, I think I left my car unlocked—" *SLICE*`,
                 `"This is exactly how Jennifer died in that movie!" *THUNK*`,
                 `"I should have listened to my therapist about trusting people!" *gurgling*`,
                 `"Why is it always the pretty ones who die first?" *CRASH*`,
-                `"I definitely should have gone to college instead!" *SPLAT*`,
-                `"My mom is going to kill me for missing curfew... oh wait." *choking sounds*`,
-                `"I knew I should have swiped left on this whole situation!" *gasping*`,
-                `"This is why I have trust issues and daddy problems!" *wheezing*`,
-                `"Note to self: never volunteer to check weird noises." *final breath*`,
-                `"I always wondered how I'd die... not like this though!" *screaming*`,
-                `"Can we talk about this like civilized people?!" *pleading*`,
-                `"Plot twist: I was adopted! Maybe that matters?" *desperate*`,
-                `"I haven't even posted my last Instagram story yet!" *sobbing*`,
-                `"This is definitely going in my one-star Yelp review!" *coughing*`,
-                `"I should have stayed in tonight and ordered DoorDash!" *regretful*`,
-                `"But I'm lactose intolerant! Doesn't that count for something?!" *confused*`,
-                `"I never got to meet Ryan Reynolds!" *dramatic*`,
-                `"My WiFi password dies with me! Good luck, roommates!" *spiteful*`,
-                `"This is way worse than my student loan debt!" *defeated*`,
-                `"At least I won't have to pretend to like pineapple on pizza anymore!" *relieved*`
+                `"I definitely should have gone to college instead!" *SPLAT*`
             ];
             
-            addEvent('dialogue', finalWords[Math.floor(Math.random() * finalWords.length)]);
-            
-            killCharacter(victim, killer, gameState.currentAct);
+            return finalWords[Math.floor(Math.random() * finalWords.length)];
         }
 
         function addGroupEvent() {
@@ -2118,135 +2623,156 @@
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
             if (aliveChars.length < 2) return;
             
-            const char1 = aliveChars[Math.floor(Math.random() * aliveChars.length)];
-            let char2 = aliveChars[Math.floor(Math.random() * aliveChars.length)];
-            while (char2 === char1 && aliveChars.length > 1) {
-                char2 = aliveChars[Math.floor(Math.random() * aliveChars.length)];
-            }
+            // Try to find characters with relationships first
+            const romanticCouples = findCharactersByRelationType(relationshipTypes.ROMANTIC)
+                .filter(pair => pair[0].status === 'Alive' && pair[1].status === 'Alive');
+            const bestFriends = findCharactersByRelationType(relationshipTypes.BEST_FRIENDS)
+                .filter(pair => pair[0].status === 'Alive' && pair[1].status === 'Alive');
+            const enemies = findCharactersByRelationType(relationshipTypes.ENEMIES)
+                .filter(pair => pair[0].status === 'Alive' && pair[1].status === 'Alive');
+            const family = findCharactersByRelationType(relationshipTypes.FAMILY)
+                .filter(pair => pair[0].status === 'Alive' && pair[1].status === 'Alive');
             
-            const moments = [
-                // Romantic moments
-                {
-                    event: `${char1.name} and ${char2.name} find a quiet moment alone together.`,
-                    dialogue: [
-                        `"I'm scared, ${char2.name}. What if we don't make it out of here?" - ${char1.name}, voice trembling.`,
-                        `"Hey, look at me. We're going to be okay. I promise." - ${char2.name}, taking their hand.`,
-                        `"I should have told you this before, but... I love you." - ${char1.name}`,
-                        `"I love you too. And that's exactly why we're both going to survive this nightmare and get matching tattoos." - ${char2.name}`
-                    ]
-                },
-                // Horror comedy moments
-                {
-                    event: `${char1.name} and ${char2.name} try to process the situation with dark humor.`,
-                    dialogue: [
-                        `"So on a scale of 1 to 10, how screwed are we?" - ${char1.name}`,
-                        `"I'd say we're hovering around a solid SlasherSim 3. Bad, but not unwatchable." - ${char2.name}`,
-                        `"Great. I always wanted to be in a horror movie. Just not as a victim." - ${char1.name}`,
-                        `"Look on the bright side - if we survive, we'll have the best college essay topic ever." - ${char2.name}`
-                    ]
-                },
-                // Campy friendship bonding
-                {
-                    event: `${char1.name} opens up to ${char2.name} about their fears.`,
-                    dialogue: [
-                        `"I keep thinking about ${gameState.characters.find(c => c.status === 'Dead')?.name || 'everyone we\'ve lost'}." - ${char1.name}`,
-                        `"I know. It's like we're trapped in the world's worst reality show." - ${char2.name}`,
-                        `"Remember when our biggest problem was choosing between Netflix or Hulu?" - ${char1.name}`,
-                        `"Simpler times. Now I'd kill for a boring math test." - ${char2.name}, then pausing, "Poor choice of words."`
-                    ]
-                },
-                // Self-aware horror moment
-                {
-                    event: `${char1.name} and ${char2.name} discuss their survival chances.`,
-                    dialogue: [
-                        `"Okay, real talk. In horror movies, who usually survives?" - ${char1.name}`,
-                        `"The virgin, the final girl, and sometimes the comic relief if they're lucky." - ${char2.name}`,
-                        `"Well, I'm definitely not the virgin..." - ${char1.name}`,
-                        `"And I'm way too sarcastic to be the final girl. We're doomed." - ${char2.name}`
-                    ]
-                },
-                // Serious dramatic moment
-                {
-                    event: `${char1.name} breaks down emotionally with ${char2.name}.`,
-                    dialogue: [
-                        `"I can't do this anymore, ${char2.name}. I'm falling apart." - ${char1.name}, sobbing.`,
-                        `"Hey, hey... look at me. You're stronger than you think." - ${char2.name}, embracing them.`,
-                        `"I keep seeing their face... the moment they..." - ${char1.name}`,
-                        `"I know. But we have to keep going. For them. For everyone we've lost." - ${char2.name}, voice breaking.`
-                    ]
-                },
-                // Pop culture references
-                {
-                    event: `${char1.name} and ${char2.name} make pop culture comparisons.`,
-                    dialogue: [
-                        `"This is like if The Purge had a baby with Big Brother." - ${char1.name}`,
-                        `"More like if Instagram influencers tried to remake Halloween." - ${char2.name}`,
-                        `"I blame Netflix for making horror movies look fun." - ${char1.name}`,
-                        `"Note to self: cancel horror movie marathon subscription if we survive." - ${char2.name}`
-                    ]
-                },
-                // Gallows humor
-                {
-                    event: `${char1.name} and ${char2.name} cope with dark comedy.`,
-                    dialogue: [
-                        `"Well, this wasn't on my vision board for the year." - ${char1.name}`,
-                        `"Really? 'Survive serial killer' wasn't one of your goals?" - ${char2.name}, sarcastically.`,
-                        `"I was more focused on 'get abs' and 'learn Spanish.'" - ${char1.name}`,
-                        `"Plot twist: the killer only speaks Spanish and has amazing abs." - ${char2.name}`
-                    ]
+            let char1, char2, relationshipType = null;
+            
+            // 70% chance to use existing relationships if available
+            if (Math.random() < 0.7) {
+                if (romanticCouples.length > 0 && Math.random() < 0.4) {
+                    [char1, char2] = romanticCouples[Math.floor(Math.random() * romanticCouples.length)];
+                    relationshipType = 'romantic';
+                } else if (bestFriends.length > 0 && Math.random() < 0.3) {
+                    [char1, char2] = bestFriends[Math.floor(Math.random() * bestFriends.length)];
+                    relationshipType = 'friends';
+                } else if (enemies.length > 0 && Math.random() < 0.2) {
+                    [char1, char2] = enemies[Math.floor(Math.random() * enemies.length)];
+                    relationshipType = 'enemies';
+                } else if (family.length > 0 && Math.random() < 0.3) {
+                    [char1, char2] = family[Math.floor(Math.random() * family.length)];
+                    relationshipType = 'family';
                 }
-            ];
-            
-            // Add archetype-specific moments
-            if (char1.archetype.name === 'The Reporter' || char2.archetype.name === 'The Reporter') {
-                const reporter = char1.archetype.name === 'The Reporter' ? char1 : char2;
-                const other = reporter === char1 ? char2 : char1;
-                moments.push({
-                    event: `${reporter.name} interviews ${other.name} about the murders.`,
-                    dialogue: [
-                        `"Can you tell me exactly what you saw when ${gameState.characters.find(c => c.status === 'Dead')?.name || 'the victim'} was killed?" - ${reporter.name}, pulling out a notepad.`,
-                        `"Are you seriously interviewing me right now? People are dying!" - ${other.name}`,
-                        `"The truth matters. If I can document what's happening, maybe we can figure out who's doing this." - ${reporter.name}`,
-                        `"Fine, but make it quick. I don't want to be the next headline." - ${other.name}`
-                    ]
-                });
             }
             
-            if (char1.archetype.name === 'The Horror Fanatic' || char2.archetype.name === 'The Horror Fanatic') {
-                const fanatic = char1.archetype.name === 'The Horror Fanatic' ? char1 : char2;
-                const other = fanatic === char1 ? char2 : char1;
-                moments.push({
-                    event: `${fanatic.name} explains horror movie rules to ${other.name}.`,
-                    dialogue: [
-                        `"Okay, listen carefully. I've seen every slasher film ever made." - ${fanatic.name}`,
-                        `"Great, so you're an expert on fictional murder?" - ${other.name}, skeptical.`,
-                        `"Fiction that's keeping us alive! Rule one: never say 'I'll be right back.'" - ${fanatic.name}`,
-                        `"Rule two: don't investigate strange noises alone. Rule three: the killer always comes back for a final scare." - ${fanatic.name}`,
-                        `"And how exactly do these 'rules' help us?" - ${other.name}`,
-                        `"Because whoever's doing this is following the same playbook!" - ${fanatic.name}`
-                    ]
-                });
+            // Fallback to random characters if no relationships used
+            if (!char1 || !char2) {
+                char1 = aliveChars[Math.floor(Math.random() * aliveChars.length)];
+                do {
+                    char2 = aliveChars[Math.floor(Math.random() * aliveChars.length)];
+                } while (char2 === char1 && aliveChars.length > 1);
+                
+                // Check what relationship they actually have
+                const relationship = getRelationship(char1, char2);
+                if (relationship) {
+                    if (relationship.type === relationshipTypes.ROMANTIC) relationshipType = 'romantic';
+                    else if (relationship.type === relationshipTypes.BEST_FRIENDS) relationshipType = 'friends';
+                    else if (relationship.type === relationshipTypes.ENEMIES) relationshipType = 'enemies';
+                    else if (relationship.type === relationshipTypes.FAMILY) relationshipType = 'family';
+                }
             }
             
-            if (char1.archetype.name === 'The Final Girl' || char2.archetype.name === 'The Final Girl') {
-                const finalGirl = char1.archetype.name === 'The Final Girl' ? char1 : char2;
-                const other = finalGirl === char1 ? char2 : char1;
-                moments.push({
-                    event: `${other.name} looks to ${finalGirl.name} for guidance.`,
-                    dialogue: [
-                        `"${finalGirl.name}, you always know what to do. How do we get out of this?" - ${other.name}`,
-                        `"I don't know! I'm just as scared as everyone else." - ${finalGirl.name}`,
-                        `"But you're the one who always keeps us together. We need you to be strong." - ${other.name}`,
-                        `"I'll try. But I can't do this alone. We all have to look out for each other." - ${finalGirl.name}`
-                    ]
-                });
-            }
+            const moments = getRelationshipSpecificMoments(char1, char2, relationshipType);
             
             const selectedMoment = moments[Math.floor(Math.random() * moments.length)];
             addEvent('event', selectedMoment.event);
             selectedMoment.dialogue.forEach(line => {
                 addEvent('dialogue', line);
             });
+        }
+
+        function getRelationshipSpecificMoments(char1, char2, relationshipType) {
+            const deadFriend = gameState.characters.find(c => c.status === 'Dead');
+            
+            // Relationship-specific moments
+            const relationshipMoments = {
+                romantic: [
+                    {
+                        event: `💕 ${char1.name} and ${char2.name} find a quiet moment together despite the terror.`,
+                        dialogue: [
+                            `"I'm scared, ${char2.name}. What if we don't make it out of here?" - ${char1.name}, voice trembling.`,
+                            `"Hey, look at me. We're going to be okay. I promise." - ${char2.name}, taking their hand.`,
+                            `"I should have told you this before, but... I love you more than anything." - ${char1.name}`,
+                            `"I love you too. And that's exactly why we're both going to survive this nightmare." - ${char2.name}`
+                        ]
+                    },
+                    {
+                        event: `💕 ${char1.name} and ${char2.name} make plans for their future together.`,
+                        dialogue: [
+                            `"When we get out of here, let's go somewhere far away." - ${char1.name}`,
+                            `"Anywhere you want. Just the two of us." - ${char2.name}`,
+                            `"I want to wake up next to you every day and forget this nightmare ever happened." - ${char1.name}`,
+                            `"We will. I promise we will." - ${char2.name}, holding them close.`
+                        ]
+                    }
+                ],
+                friends: [
+                    {
+                        event: `👥 Best friends ${char1.name} and ${char2.name} rely on their bond to stay strong.`,
+                        dialogue: [
+                            `"We've been through everything together. We can survive this too." - ${char1.name}`,
+                            `"Remember when we thought failing chemistry was the worst thing ever?" - ${char2.name}`,
+                            `"God, we were so naive. I'd take a thousand chemistry exams over this." - ${char1.name}`,
+                            `"At least we're facing it together. Best friends till the end." - ${char2.name}`
+                        ]
+                    },
+                    {
+                        event: `👥 ${char1.name} and ${char2.name} share childhood memories to stay calm.`,
+                        dialogue: [
+                            `"Remember our sleepovers when we'd stay up all night watching horror movies?" - ${char1.name}`,
+                            `"And we'd laugh at how stupid the victims were for making bad decisions." - ${char2.name}`,
+                            `"Well, this is awkward. We're literally living in one now." - ${char1.name}`,
+                            `"At least we know all the rules. Stick together, don't split up, don't investigate strange noises." - ${char2.name}`
+                        ]
+                    }
+                ],
+                enemies: [
+                    {
+                        event: `⚔️ Old tensions flare between ${char1.name} and ${char2.name} even in the face of danger.`,
+                        dialogue: [
+                            `"I can't believe I have to rely on YOU to survive this." - ${char1.name}, disgusted.`,
+                            `"Trust me, the feeling is mutual. But I'd rather work with you than die." - ${char2.name}`,
+                            `"Fine. Temporary truce. But when this is over, we go back to hating each other." - ${char1.name}`,
+                            `"Deal. Now can we focus on not dying?" - ${char2.name}, rolling their eyes.`
+                        ]
+                    },
+                    {
+                        event: `⚔️ ${char1.name} and ${char2.name}'s rivalry threatens to split the group.`,
+                        dialogue: [
+                            `"I'm not following any plan that involves trusting ${char2.name}!" - ${char1.name}`,
+                            `"Oh, that's rich coming from someone who stabbed me in the back last year!" - ${char2.name}`,
+                            `"That was different and you know it!" - ${char1.name}`,
+                            `"Different? You cost me my scholarship! I'll never forgive you for that!" - ${char2.name}`
+                        ]
+                    }
+                ],
+                family: [
+                    {
+                        event: `👪 Family members ${char1.name} and ${char2.name} draw strength from their bond.`,
+                        dialogue: [
+                            `"Mom and Dad would be so proud of how strong you're being." - ${char1.name}`,
+                            `"We have to protect each other. We're all the family we have left here." - ${char2.name}`,
+                            `"Remember what Dad always said? 'Family sticks together no matter what.'" - ${char1.name}`,
+                            `"No matter what. I won't let anything happen to you." - ${char2.name}, determined.`
+                        ]
+                    }
+                ]
+            };
+            
+            // Return relationship-specific moments or fall back to general moments
+            if (relationshipType && relationshipMoments[relationshipType]) {
+                return relationshipMoments[relationshipType];
+            }
+            
+            // Fallback to original general moments
+            return [
+                {
+                    event: `${char1.name} and ${char2.name} try to process the situation.`,
+                    dialogue: [
+                        `"So on a scale of 1 to 10, how screwed are we?" - ${char1.name}`,
+                        `"I'd say we're hovering around a solid 8. Bad, but not unwatchable." - ${char2.name}`,
+                        `"Great. I always wanted to be in a horror movie. Just not as a victim." - ${char1.name}`,
+                        `"Look on the bright side - if we survive, we'll have the best college essay topic ever." - ${char2.name}`
+                    ]
+                }
+            ];
         }
 
         function addTensionMoment() {
@@ -2947,6 +3473,11 @@
                     ];
                     addEvent('dialogue', reactions[Math.floor(Math.random() * reactions.length)]);
                 }
+                
+                // Add relationship reactions
+                setTimeout(() => {
+                    addRelationshipReactions(victim, 'death');
+                }, 1000);
             });
             
             // Attack but don't kill some other survivors
@@ -3835,7 +4366,8 @@
                 autoPlay: false,
                 movieComplete: false,
                 storyQueue: [],
-                currentStoryIndex: 0
+                currentStoryIndex: 0,
+                relationships: new Map()
             };
             
             // Add selected survivors as returning characters with boosted stats
@@ -3859,6 +4391,38 @@
                 
                 gameState.characters.push(returningSurvivor);
             });
+            
+            // Preserve relationships between returning survivors
+            for (let i = 0; i < selectedSurvivors.length; i++) {
+                for (let j = i + 1; j < selectedSurvivors.length; j++) {
+                    const oldRel = getRelationship(selectedSurvivors[i], selectedSurvivors[j]);
+                    if (oldRel) {
+                        // Find the new character objects
+                        const newChar1 = gameState.characters[i];
+                        const newChar2 = gameState.characters[j];
+                        
+                        // Relationships may have evolved due to shared trauma
+                        let newRelType = oldRel.type;
+                        
+                        // 30% chance relationships changed due to trauma
+                        if (Math.random() < 0.3) {
+                            if (oldRel.type === relationshipTypes.NEUTRAL) {
+                                // Neutral relationships might become friendships through shared trauma
+                                newRelType = relationshipTypes.BEST_FRIENDS;
+                            } else if (oldRel.type === relationshipTypes.ENEMIES) {
+                                // Enemies might put aside differences
+                                newRelType = Math.random() < 0.7 ? relationshipTypes.NEUTRAL : relationshipTypes.BEST_FRIENDS;
+                            } else if (oldRel.type === relationshipTypes.BEST_FRIENDS) {
+                                // Best friends might become even closer (family-like bond)
+                                newRelType = Math.random() < 0.4 ? relationshipTypes.FAMILY : relationshipTypes.BEST_FRIENDS;
+                            }
+                            // Romantic and family relationships usually stay the same
+                        }
+                        
+                        createRelationship(newChar1, newChar2, newRelType);
+                    }
+                }
+            }
             
             // Add new characters based on user selection
             const usedNames = new Set(selectedSurvivors.map(s => s.name));
@@ -3965,7 +4529,8 @@
                 autoPlay: false,
                 movieComplete: false,
                 storyQueue: [],
-                currentStoryIndex: 0
+                currentStoryIndex: 0,
+                relationships: new Map()
             };
             
             // Reset franchise history for completely new franchise
@@ -3978,6 +4543,12 @@
             document.getElementById('movie-screen').classList.add('hidden');
             document.getElementById('setup-screen').classList.remove('hidden');
             document.getElementById('cast-customization').classList.add('hidden');
+            
+            // Remove any relationship setup screen
+            const relationshipSetup = document.getElementById('relationship-setup');
+            if (relationshipSetup) {
+                relationshipSetup.remove();
+            }
             
             // Reset form values
             document.getElementById('movie-title').value = '';
@@ -4008,7 +4579,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initAudioSystem();
             initAudioWidget();
-            console.log('Slasher Movie Simulator with Audio/Visual enhancements loaded successfully!');
+            console.log('Slasher Movie Simulator with Relationship System loaded successfully!');
             
             // Enable audio context on first user interaction (required by browsers)
             const enableAudio = () => {
@@ -4021,6 +4592,42 @@
             document.addEventListener('click', enableAudio);
             document.addEventListener('keydown', enableAudio);
         });
+
+        // Make sure these functions are globally accessible
+        window.toggleAudioWidget = toggleAudioWidget;
+        window.toggleAmbient = toggleAmbient;
+        window.toggleSFX = toggleSFX;
+        window.toggleMusic = toggleMusic;
+        window.setMasterVolume = setMasterVolume;
+        window.setupCast = setupCast;
+        window.testRelationshipSystem = testRelationshipSystem;
+        window.showRelationshipSetup = showRelationshipSetup;
+        window.generateRandomRelationships = generateRandomRelationships;
+        window.clearAllRelationships = clearAllRelationships;
+        window.finishRelationshipSetup = finishRelationshipSetup;
+        window.backToCastCustomization = backToCastCustomization;
+        window.setRelationship = setRelationship;
+        window.updateCharacterName = updateCharacterName;
+        window.updateCharacterArchetype = updateCharacterArchetype;
+        window.updateCharacterStat = updateCharacterStat;
+        window.randomizeCast = randomizeCast;
+        window.startMovie = startMovie;
+        window.selectKillerPlayer = selectKillerPlayer;
+        window.showKillTargets = showKillTargets;
+        window.cancelKillAction = cancelKillAction;
+        window.attemptKill = attemptKill;
+        window.performPsychOut = performPsychOut;
+        window.plantEvidence = plantEvidence;
+        window.hideAndWait = hideAndWait;
+        window.forceKillerAction = forceKillerAction;
+        window.continueStory = continueStory;
+        window.toggleAutoplay = toggleAutoplay;
+        window.skipToEnd = skipToEnd;
+        window.viewResults = viewResults;
+        window.createSequel = createSequel;
+        window.confirmSurvivorSelection = confirmSurvivorSelection;
+        window.cancelSurvivorSelection = cancelSurvivorSelection;
+        window.resetSimulator = resetSimulator;
     </script>
 </body>
 </html>
