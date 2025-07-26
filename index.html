@@ -403,6 +403,10 @@
                     <input type="text" id="movie-title" placeholder="Enter your horror movie title...">
                 </div>
                 <div class="form-group">
+                    <label for="movie-year">Release Year</label>
+                    <input type="number" id="movie-year" min="1970" max="2030" value="2025" placeholder="2025">
+                </div>
+                <div class="form-group">
                     <label for="game-mode">Game Mode</label>
                     <select id="game-mode">
                         <option value="spectator">Spectator (Killer hidden)</option>
@@ -428,7 +432,7 @@
                         <option value="3">3 Killers</option>
                     </select>
                 </div>
-                <button class="btn" onclick="setupCast()">Create Cast</button>
+                <button class="btn" onclick="setupCast()" id="create-cast-btn">Create Cast</button>
             </div>
 
             <div id="cast-customization" class="section hidden">
@@ -559,6 +563,7 @@
             gameMode: 'spectator',
             currentAct: 1,
             movieTitle: '',
+            movieYear: new Date().getFullYear(),
             events: [],
             isKillerMode: false,
             killerPlayer: null,
@@ -576,75 +581,92 @@
 
         // Setup functions
         function setupCast() {
-            const castSize = parseInt(document.getElementById('cast-size').value);
-            const gameMode = document.getElementById('game-mode').value;
-            const movieTitle = document.getElementById('movie-title').value || 'Untitled Horror';
-            
-            gameState.gameMode = gameMode;
-            gameState.movieTitle = movieTitle;
-            gameState.isKillerMode = gameMode === 'killer';
-            
-            // Generate characters
-            gameState.characters = [];
-            const usedNames = new Set();
-            const usedArchetypes = new Set();
-            
-            for (let i = 0; i < castSize; i++) {
-                let name, archetype;
+            try {
+                console.log('setupCast function called');
                 
-                // Get unique name
-                do {
-                    name = names[Math.floor(Math.random() * names.length)];
-                } while (usedNames.has(name));
-                usedNames.add(name);
+                const castSize = parseInt(document.getElementById('cast-size').value);
+                const gameMode = document.getElementById('game-mode').value;
+                const movieTitle = document.getElementById('movie-title').value || 'Untitled Horror';
+                const movieYear = parseInt(document.getElementById('movie-year').value) || new Date().getFullYear();
                 
-                // Get unique archetype (allow duplicates if needed)
-                if (archetypes.length >= castSize) {
+                console.log('Values:', { castSize, gameMode, movieTitle, movieYear });
+                
+                gameState.gameMode = gameMode;
+                gameState.movieTitle = movieTitle;
+                gameState.movieYear = movieYear;
+                gameState.isKillerMode = gameMode === 'killer';
+                
+                // Generate characters
+                gameState.characters = [];
+                const usedNames = new Set();
+                const usedArchetypes = new Set();
+                
+                for (let i = 0; i < castSize; i++) {
+                    let name, archetype;
+                    
+                    // Get unique name
                     do {
+                        name = names[Math.floor(Math.random() * names.length)];
+                    } while (usedNames.has(name));
+                    usedNames.add(name);
+                    
+                    // Get unique archetype (allow duplicates if needed)
+                    if (archetypes.length >= castSize) {
+                        do {
+                            archetype = archetypes[Math.floor(Math.random() * archetypes.length)];
+                        } while (usedArchetypes.has(archetype.name));
+                        usedArchetypes.add(archetype.name);
+                    } else {
                         archetype = archetypes[Math.floor(Math.random() * archetypes.length)];
-                    } while (usedArchetypes.has(archetype.name));
-                    usedArchetypes.add(archetype.name);
+                    }
+                    
+                    const character = {
+                        id: i,
+                        name: name,
+                        archetype: archetype,
+                        stats: { ...archetype.stats },
+                        status: 'Alive',
+                        actStatuses: { 1: 'Alive', 2: 'Alive', 3: 'Alive' },
+                        killedBy: null,
+                        deathAct: null,
+                        survivalChance: calculateSurvivalChance(archetype.stats),
+                        edgic: { 1: 'UTR1', 2: 'UTR1', 3: 'UTR1' },
+                        isReturning: false
+                    };
+                    
+                    gameState.characters.push(character);
+                }
+                
+                console.log('Generated characters:', gameState.characters.length);
+                
+                // Determine killers
+                let killerCount = document.getElementById('killer-count').value;
+                if (killerCount === 'random') {
+                    const rand = Math.random();
+                    killerCount = rand < 0.6 ? 1 : rand < 0.9 ? 2 : 3;
                 } else {
-                    archetype = archetypes[Math.floor(Math.random() * archetypes.length)];
+                    killerCount = parseInt(killerCount);
                 }
                 
-                const character = {
-                    id: i,
-                    name: name,
-                    archetype: archetype,
-                    stats: { ...archetype.stats },
-                    status: 'Alive',
-                    actStatuses: { 1: 'Alive', 2: 'Alive', 3: 'Alive' },
-                    killedBy: null,
-                    deathAct: null,
-                    survivalChance: calculateSurvivalChance(archetype.stats),
-                    edgic: { 1: 'UTR1', 2: 'UTR1', 3: 'UTR1' },
-                    isReturning: false
-                };
-                
-                gameState.characters.push(character);
-            }
-            
-            // Determine killers
-            let killerCount = document.getElementById('killer-count').value;
-            if (killerCount === 'random') {
-                const rand = Math.random();
-                killerCount = rand < 0.6 ? 1 : rand < 0.9 ? 2 : 3;
-            } else {
-                killerCount = parseInt(killerCount);
-            }
-            
-            gameState.killers = [];
-            const killerIndices = [];
-            while (killerIndices.length < killerCount) {
-                const index = Math.floor(Math.random() * gameState.characters.length);
-                if (!killerIndices.includes(index)) {
-                    killerIndices.push(index);
-                    gameState.killers.push(gameState.characters[index]);
+                gameState.killers = [];
+                const killerIndices = [];
+                while (killerIndices.length < killerCount) {
+                    const index = Math.floor(Math.random() * gameState.characters.length);
+                    if (!killerIndices.includes(index)) {
+                        killerIndices.push(index);
+                        gameState.killers.push(gameState.characters[index]);
+                    }
                 }
+                
+                console.log('Selected killers:', gameState.killers.length);
+                
+                displayCastCustomization();
+                console.log('setupCast completed successfully');
+                
+            } catch (error) {
+                console.error('Error in setupCast:', error);
+                alert('Error creating cast: ' + error.message);
             }
-            
-            displayCastCustomization();
         }
 
         function calculateSurvivalChance(stats) {
@@ -2549,7 +2571,7 @@
             // Create movie record
             const movieRecord = {
                 title: gameState.movieTitle,
-                year: new Date().getFullYear(), // You could make this customizable
+                year: gameState.movieYear,
                 characters: {}
             };
             
@@ -2773,6 +2795,51 @@
                 
                 tbody.appendChild(row);
             });
+            
+            // Add edgic legend after the table
+            addEdgicLegend();
+        }
+
+        function addEdgicLegend() {
+            // Check if legend already exists
+            if (document.querySelector('.edgic-legend')) return;
+            
+            const legendDiv = document.createElement('div');
+            legendDiv.className = 'edgic-legend';
+            legendDiv.style.marginTop = '20px';
+            legendDiv.style.padding = '20px';
+            legendDiv.style.background = '#2a2a2a';
+            legendDiv.style.borderRadius = '8px';
+            legendDiv.style.border = '1px solid #555';
+            
+            legendDiv.innerHTML = `
+                <h4 style="color: #ff4444; margin-bottom: 15px; text-transform: uppercase;">📊 Edgic Rating Legend</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <div>
+                        <h5 style="color: #fff; margin-bottom: 10px;">Visibility Types:</h5>
+                        <div style="margin-bottom: 8px;"><span class="edgic-cell edgic-cp" style="display: inline-block; width: 50px; margin-right: 10px;">CP</span> <strong>Complex Personality</strong> - Strategic, gets personal content</div>
+                        <div style="margin-bottom: 8px;"><span class="edgic-cell edgic-mor" style="display: inline-block; width: 50px; margin-right: 10px;">MOR</span> <strong>Middle of the Road</strong> - Moderate screen time, balanced edit</div>
+                        <div style="margin-bottom: 8px;"><span class="edgic-cell edgic-utr" style="display: inline-block; width: 50px; margin-right: 10px;">UTR</span> <strong>Under the Radar</strong> - Minimal screen time</div>
+                        <div style="margin-bottom: 8px;"><span class="edgic-cell edgic-ott" style="display: inline-block; width: 50px; margin-right: 10px;">OTT</span> <strong>Over the Top</strong> - Dramatic, excessive reactions</div>
+                        <div style="margin-bottom: 8px;"><span class="edgic-cell edgic-na" style="display: inline-block; width: 50px; margin-right: 10px;">N/A</span> <strong>Not Available</strong> - Character is dead</div>
+                    </div>
+                    <div>
+                        <h5 style="color: #fff; margin-bottom: 10px;">Rating Scale:</h5>
+                        <div style="margin-bottom: 8px;"><strong>1-5</strong> - Visibility level (1 = low, 5 = high)</div>
+                        <div style="margin-bottom: 8px;"><strong>P</strong> - Positive tone (heroic, sympathetic)</div>
+                        <div style="margin-bottom: 8px;"><strong>N</strong> - Negative tone (villainous, unsympathetic)</div>
+                        <div style="margin-bottom: 8px;"><strong>M</strong> - Mixed tone (both positive and negative)</div>
+                        <div style="margin-bottom: 8px;"><em>No letter</em> - Neutral tone</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: rgba(255, 68, 68, 0.1); border-radius: 5px; font-size: 0.9rem; color: #ccc;">
+                    <strong>Examples:</strong> CP5 = Complex Personality with maximum visibility | MORN3 = Middle of the Road with negative tone and moderate visibility | UTR1 = Under the radar with minimal screen time
+                </div>
+            `;
+            
+            // Insert after the edgic table
+            const edgicTable = document.querySelector('.edgic-table');
+            edgicTable.appendChild(legendDiv);
         }
 
         function getEdgicClass(rating) {
@@ -2807,14 +2874,38 @@
             selectionScreen.innerHTML = `
                 <div class="container">
                     <div class="header">
-                        <h1>🎬 SELECT RETURNING SURVIVORS 🎬</h1>
-                        <div class="subtitle">Choose which characters will return for the sequel</div>
+                        <h1>🎬 CREATE SEQUEL 🎬</h1>
+                        <div class="subtitle">Configure your sequel and select returning survivors</div>
                         <div class="tagline">Their experience might just save them... or make them bigger targets</div>
                     </div>
                     
                     <div class="section">
-                        <h2>Available Survivors</h2>
-                        <p style="color: #ccc; margin-bottom: 20px;">Select which survivors will return with boosted stats and traumatic memories:</p>
+                        <h2>Sequel Configuration</h2>
+                        <div class="form-group">
+                            <label for="sequel-title">Sequel Title</label>
+                            <input type="text" id="sequel-title" value="${generateSequelTitle(gameState.movieTitle)}" placeholder="Enter sequel title...">
+                        </div>
+                        <div class="form-group">
+                            <label for="sequel-year">Release Year</label>
+                            <input type="number" id="sequel-year" min="1970" max="2030" value="${gameState.movieYear + 1}" placeholder="${gameState.movieYear + 1}">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-characters-count">Number of New Characters to Add</label>
+                            <select id="new-characters-count">
+                                <option value="2">2 new characters</option>
+                                <option value="3">3 new characters</option>
+                                <option value="4" selected>4 new characters</option>
+                                <option value="5">5 new characters</option>
+                                <option value="6">6 new characters</option>
+                                <option value="7">7 new characters</option>
+                                <option value="8">8 new characters</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Select Returning Survivors</h2>
+                        <p style="color: #ccc; margin-bottom: 20px;">Choose which survivors will return with boosted stats and traumatic memories:</p>
                         <div id="survivor-selection-grid" class="cast-grid"></div>
                         <div style="text-align: center; margin-top: 30px;">
                             <button class="btn" onclick="confirmSurvivorSelection()">Create Sequel with Selected Survivors</button>
@@ -2888,14 +2979,19 @@
                 return;
             }
             
+            // Get sequel configuration
+            const sequelTitle = document.getElementById('sequel-title').value || generateSequelTitle(gameState.movieTitle);
+            const sequelYear = parseInt(document.getElementById('sequel-year').value) || (gameState.movieYear + 1);
+            const newCharactersCount = parseInt(document.getElementById('new-characters-count').value) || 4;
+            
             // Remove selection screen
             const selectionScreen = document.getElementById('survivor-selection-screen');
             if (selectionScreen) {
                 selectionScreen.remove();
             }
             
-            // Create sequel with selected survivors
-            createSequelWithSurvivors(selectedSurvivors);
+            // Create sequel with selected survivors and configuration
+            createSequelWithSurvivors(selectedSurvivors, sequelTitle, sequelYear, newCharactersCount);
         }
         
         function cancelSurvivorSelection() {
@@ -2907,9 +3003,7 @@
             document.getElementById('results-screen').classList.remove('hidden');
         }
         
-        function createSequelWithSurvivors(selectedSurvivors) {
-            const originalTitle = gameState.movieTitle;
-            
+        function createSequelWithSurvivors(selectedSurvivors, sequelTitle, sequelYear, newCharactersCount) {
             // Remove any existing franchise history table (will be recreated with updated data)
             const existingFranchiseTable = document.querySelector('.franchise-history');
             if (existingFranchiseTable) {
@@ -2922,7 +3016,8 @@
                 killers: [],
                 gameMode: 'spectator',
                 currentAct: 1,
-                movieTitle: generateSequelTitle(originalTitle),
+                movieTitle: sequelTitle,
+                movieYear: sequelYear,
                 events: [],
                 isKillerMode: false,
                 killerPlayer: null,
@@ -2954,13 +3049,11 @@
                 gameState.characters.push(returningSurvivor);
             });
             
-            // Add new characters to reach cast size of 8 (or more if needed)
-            const originalCastSize = Math.max(8, selectedSurvivors.length + 4);
-            const newCharactersNeeded = originalCastSize - selectedSurvivors.length;
+            // Add new characters based on user selection
             const usedNames = new Set(selectedSurvivors.map(s => s.name));
             const usedArchetypes = new Set(selectedSurvivors.map(s => s.archetype.name));
             
-            for (let i = 0; i < newCharactersNeeded; i++) {
+            for (let i = 0; i < newCharactersCount; i++) {
                 let name, archetype;
                 
                 // Get unique name
@@ -3012,13 +3105,14 @@
             
             // Update the movie title field
             document.getElementById('movie-title').value = gameState.movieTitle;
+            document.getElementById('movie-year').value = gameState.movieYear;
             
             // Show sequel cast
             displayCastCustomization();
             
             // Show sequel message
             setTimeout(() => {
-                alert(`🎬 SEQUEL CREATED! 🎬\n\n"${gameState.movieTitle}"\n\n${selectedSurvivors.length} selected survivor(s) return with boosted stats and ${newCharactersNeeded} new victims... I mean, characters!\n\nReturning characters are highlighted in green and have improved survival skills from their previous experience.`);
+                alert(`🎬 SEQUEL CREATED! 🎬\n\n"${gameState.movieTitle}" (${gameState.movieYear})\n\n${selectedSurvivors.length} selected survivor(s) return with boosted stats and ${newCharactersCount} new victims... I mean, characters!\n\nReturning characters are highlighted in green and have improved survival skills from their previous experience.`);
             }, 500);
         }
         
@@ -3051,6 +3145,7 @@
                 gameMode: 'spectator',
                 currentAct: 1,
                 movieTitle: '',
+                movieYear: new Date().getFullYear(),
                 events: [],
                 isKillerMode: false,
                 killerPlayer: null,
@@ -3073,6 +3168,7 @@
             
             // Reset form values
             document.getElementById('movie-title').value = '';
+            document.getElementById('movie-year').value = new Date().getFullYear();
             document.getElementById('game-mode').value = 'spectator';
             document.getElementById('cast-size').value = '8';
             document.getElementById('killer-count').value = 'random';
