@@ -644,7 +644,7 @@
     <div class="container">
         <div class="header">
             <h1>💀 SLASHER MOVIE SIMULATOR 💀</h1>
-            <div class="subtitle">Inspired by the Scream franchise</div>
+            <div class="subtitle">Inspired by the Slasher genre</div>
             <div class="tagline">The killer is among us...</div>
         </div>
 
@@ -793,6 +793,7 @@
             { name: 'The Skeptic', description: 'Doesn\'t believe in the supernatural', stats: { survival: 5, intelligence: 8, social: 5, athletics: 6, stealth: 6, luck: 4 } },
             { name: 'The Hero', description: 'Brave protector of others', stats: { survival: 7, intelligence: 7, social: 8, athletics: 8, stealth: 5, luck: 6 } },
             { name: 'The Coward', description: 'First to run, sometimes survives', stats: { survival: 6, intelligence: 6, social: 4, athletics: 7, stealth: 8, luck: 8 } },
+            { name: 'The Goth', description: 'Dark-humored, witty, and enigmaticly unbothered', stats: { survival: 8, intelligence: 8, social: 4, athletics: 2, stealth: 9, luck: 5 } },
             { name: 'The Tomboy', description: 'Tough and independent', stats: { survival: 7, intelligence: 7, social: 5, athletics: 8, stealth: 7, luck: 6 } },
             { name: 'The Drama Queen', description: 'Attention-seeking and dramatic', stats: { survival: 3, intelligence: 5, social: 8, athletics: 4, stealth: 2, luck: 4 } },
             { name: 'The Boyfriend', description: 'Devoted partner, often protective', stats: { survival: 5, intelligence: 6, social: 7, athletics: 7, stealth: 5, luck: 5 } },
@@ -802,12 +803,44 @@
         ];
 
         const names = [
-            'Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Ethan', 'Sophia', 'Mason', 'Isabella', 'William',
-            'Mia', 'James', 'Charlotte', 'Benjamin', 'Amelia', 'Lucas', 'Harper', 'Henry', 'Evelyn', 'Alexander',
-            'Abigail', 'Michael', 'Emily', 'Elijah', 'Elizabeth', 'Daniel', 'Mila', 'Matthew', 'Ella', 'Jackson',
-            'Madison', 'David', 'Scarlett', 'Sebastian', 'Victoria', 'Joseph', 'Aria', 'Samuel', 'Grace', 'John',
-            'Chloe', 'Owen', 'Camila', 'Wyatt', 'Penelope', 'Jack', 'Riley', 'Luke', 'Layla', 'Jayden',
-            'Zoey', 'Dylan', 'Nora', 'Grayson', 'Lily', 'Levi', 'Eleanor', 'Isaac', 'Hannah', 'Gabriel'
+         'Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Ethan', 'Sophia', 'Mason', 'Isabella', 'William',
+  'Mia', 'James', 'Charlotte', 'Benjamin', 'Amelia', 'Lucas', 'Harper', 'Henry', 'Evelyn', 'Alexander',
+  'Abigail', 'Michael', 'Emily', 'Elijah', 'Elizabeth', 'Daniel', 'Mila', 'Matthew', 'Ella', 'Jackson',
+  'Madison', 'David', 'Scarlett', 'Sebastian', 'Victoria', 'Joseph', 'Aria', 'Samuel', 'Grace', 'John',
+  'Chloe', 'Owen', 'Camila', 'Wyatt', 'Penelope', 'Jack', 'Riley', 'Luke', 'Layla', 'Jayden',
+  'Luna', 'Dylan', 'Zoe', 'Gabriel', 'Nora', 'Aiden', 'Lily', 'Anthony', 'Hannah', 'Isaac',
+  'Addison', 'Grayson', 'Ellie', 'Andrew', 'Zoey', 'Christopher', 'Stella', 'Joshua', 'Natalie', 'Jaxon',
+  'Leah', 'Julian', 'Hazel', 'Nathan', 'Violet', 'Aaron', 'Aurora', 'Lincoln', 'Savannah', 'Christian',
+  'Audrey', 'Hunter', 'Brooklyn', 'Cameron', 'Bella', 'Connor', 'Claire', 'Eli', 'Skylar', 'Ezra',
+  'Lucy', 'Thomas', 'Paisley', 'Charles', 'Everly', 'Caleb', 'Anna', 'Isaiah', 'Caroline', 'Ryan',
+  'Nova', 'Adrian', 'Genesis', 'Nolan', 'Kennedy', 'Jeremiah', 'Samantha', 'Easton', 'Aaliyah', 'Ezekiel',
+  'Cora', 'Colton', 'Ruby', 'Brayden', 'Eva', 'Jordan', 'Serenity', 'Angel', 'Autumn', 'Roman',
+  'Alice', 'Austin', 'Hailey', 'Dominic', 'Gianna', 'Adam', 'Sadie', 'Xavier', 'Quinn', 'Jose',
+  'Nevaeh', 'Jace', 'Piper', 'Levi', 'Kinsley', 'Jonathan', 'Clara', 'Christopher', 'Rylee', 'Hudson',
+  'Athena', 'Robert', 'Melanie', 'Ian', 'Naomi', 'Carson', 'Eliza', 'Axel', 'Isla', 'Miles',
+  'Josephine', 'Jason', 'Lyla', 'Declan', 'Katherine', 'Brandon', 'Brielle', 'Weston', 'Arya', 'Justin',
+  'Ivy', 'Parker', 'Jade', 'Luis', 'Rose', 'Diego', 'Maria', 'Greyson', 'Liliana', 'Kevin',
+  'Margaret', 'Zachary', 'Adeline', 'Tyler', 'Raelynn', 'Bentley', 'Melody', 'Brody', 'Julia', 'Max',
+  'Maya', 'Juan', 'Valentina', 'Kaiden', 'Reagan', 'Asher', 'Lilly', 'Carlos', 'Ashley', 'Micah',
+  'Athena', 'Vincent', 'Ariana', 'George', 'Elena', 'Maverick', 'Sophie', 'Giovanni', 'Brianna', 'Maxwell',
+  'Juliette', 'Kingston', 'Alexandra', 'Jayce', 'Harmony', 'Kayden', 'Blakely', 'Ayden', 'Isabel', 'Rowan',
+  'Faith', 'Braxton', 'Andrea', 'Ryker', 'Londyn', 'Ivan', 'Makayla', 'Beau', 'Emery', 'Camden',
+  'Adalynn', 'Sawyer', 'Jocelyn', 'Harrison', 'Nicole', 'Gavin', 'Vivienne', 'Leonardo', 'Lena', 'Emmett',
+  'Gabriella', 'Kailey', 'Tucker', 'Alina', 'August', 'Mckenzie', 'Finn', 'Rebecca', 'Rhett', 'Brooklynn',
+  'Zion', 'Dakota', 'Bennett', 'Anastasia', 'Kaleb', 'Alaina', 'Joel', 'Phoebe', 'Grant', 'Rachel',
+  'Ryder', 'Angela', 'Emiliano', 'Tessa', 'Alan', 'Leila', 'Victor', 'Daisy', 'Abel', 'Elise',
+  'Matteo', 'Lucia', 'Nicolas', 'Genevieve', 'Archer', 'Alayna', 'Jasper', 'Camille', 'Maddox', 'Thea',
+  'Knox', 'Freya', 'Malachi', 'Amaya', 'Zayden', 'Ruth', 'Erick', 'Selena', 'Jude', 'Adelyn',
+  'Pedro', 'Charlee', 'Spencer', 'Journee', 'Tristan', 'Harmony', 'Messiah', 'Annabelle', 'Manuel', 'Arabella',
+  'Karter', 'Fiona', 'Cody', 'Nina', 'Paxton', 'Brynlee', 'Lane', 'Kate', 'Phoenix', 'Laila',
+  'Remington', 'Jayla', 'Brantley', 'Kayla', 'Bryson', 'Alani', 'Sergio', 'Adrianna', 'Colt', 'Ember',
+  'Troy', 'Dakota', 'Ricardo', 'Talia', 'Zane', 'Miranda', 'Francisco', 'Catalina', 'Kyrie', 'Heidi',
+  'Shane', 'Daniella', 'Seth', 'Veronica', 'Marshall', 'Marley', 'Wade', 'Giselle', 'Jett', 'Malia',
+  'Andy', 'Annie', 'Desmond', 'Gwendolyn', 'Ali', 'Joy', 'Edwin', 'Helen', 'Tobias', 'Lucille',
+  'Armando', 'Yaretzi', 'Gage', 'Angelina', 'Edgar', 'Amira', 'Cohen', 'Evangeline', 'Niko', 'Francesca',
+  'Fabian', 'April', 'Ari', 'Julianna', 'Corbin', 'Esmeralda', 'Koa', 'Laura', 'Saul', 'Mira',
+  'Zander', 'Daphne', 'Omari', 'Lana', 'Reid', 'Ophelia', 'Kian', 'Cecilia', 'Derek', 'Adelaide',
+  'Cash', 'Nylah', 'Kellan', 'Elliott', 'Moses', 'Winter', 'Reed', 'Celeste', 'Finley', 'Lara', 'Figgy', 'Feng', 'Forrest'
         ];
 
         // Game state
@@ -2033,7 +2066,7 @@
                 `The group finds a creepy diary hidden in the attic. ${char1.name} reads aloud: "Day 47: They still don't suspect me." Everyone looks around suspiciously. "Well, that's not ominous at all," mutters ${char2.name}.`,
                 `${char1.name} suggests they arm themselves with kitchen knives. ${char2.name} picks up a butter knife. "This should do it," they say sarcastically. ${char3.name} grabs a rolling pin. "I'm going full Great British Bake-Off on this killer."`,
                 `Everyone decides to search different rooms. ${char1.name} points out, "Isn't splitting up how everyone dies in horror movies?" ${char2.name} shrugs, "We'll be fine. What could go wrong?" Famous last words.`,
-                `${char1.name} finds a basement door that's been boarded up. "Should we check what's down there?" ${char2.name} responds, "Absolutely not! That's Horror 101: Never go in the basement! Have you learned nothing from Scream?"`,
+                `${char1.name} finds a basement door that's been boarded up. "Should we check what's down there?" ${char2.name} responds, "Absolutely not! That's Horror 101: Never go in the basement! Have you learned nothing from scary movies?"`,
                 `The group discovers strange symbols carved into the walls. ${char1.name} tries to take a photo but their camera won't work. "Great, even my phone knows this is cursed," they mutter.`,
                 `${char1.name} notices all the mirrors in the house are covered. "That's not ominous at all," says ${char2.name}. ${char3.name} uncovers one and immediately screams at their own reflection. "False alarm! Just my terrible hair!"`,
                 `Everyone realizes they can't remember how they got to this place. ${char1.name} says, "Last thing I remember was getting in the car..." ${char2.name} adds, "This feels like a really bad movie plot. Like, really bad."`,
@@ -2046,7 +2079,7 @@
                     `${gameState.characters.find(c => c.archetype.name === 'The Reporter')?.name} tries to interview everyone. "Can you describe your feelings about possibly dying tonight? On a scale of one to ten, how would you rate this horror experience?"`,
                 ] : []),
                 ...(gameState.characters.some(c => c.archetype.name === 'The Horror Fanatic' && c.status === 'Alive') ? [
-                    `${gameState.characters.find(c => c.archetype.name === 'The Horror Fanatic')?.name} excitedly explains, "This is exactly like Friday the 13th Part VII! We need to follow the survival rules! Step one: don't be stupid!"`,
+                    `${gameState.characters.find(c => c.archetype.name === 'The Horror Fanatic')?.name} excitedly explains, "This is exactly like my favorite slasher! We need to follow the survival rules! Step one: don't be stupid!"`,
                     `${gameState.characters.find(c => c.archetype.name === 'The Horror Fanatic')?.name} starts listing horror movie tropes. "Don't say 'I'll be right back,' don't investigate strange noises, and never, EVER split up! Also, avoid having sex because that's basically a death sentence!"`,
                 ] : [])
             ];
@@ -2106,8 +2139,8 @@
                 {
                     event: `${char1.name} and ${char2.name} try to process the situation with dark humor.`,
                     dialogue: [
-                        `"So on a scale of Friday the 13th to Saw, how screwed are we?" - ${char1.name}`,
-                        `"I'd say we're hovering around a solid Scream 3. Bad, but not unwatchable." - ${char2.name}`,
+                        `"So on a scale of 1 to 10, how screwed are we?" - ${char1.name}`,
+                        `"I'd say we're hovering around a solid SlasherSim 3. Bad, but not unwatchable." - ${char2.name}`,
                         `"Great. I always wanted to be in a horror movie. Just not as a victim." - ${char1.name}`,
                         `"Look on the bright side - if we survive, we'll have the best college essay topic ever." - ${char2.name}`
                     ]
