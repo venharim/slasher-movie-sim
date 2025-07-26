@@ -322,15 +322,37 @@
             text-align: center;
             font-weight: bold;
             padding: 8px 4px;
+            border-radius: 3px;
         }
 
-        .edgic-cp { background: #4CAF50; color: white; }
-        .edgic-mor { background: #2196F3; color: white; }
-        .edgic-utr { background: #9E9E9E; color: white; }
-        .edgic-ott { background: #FF5722; color: white; }
-        .edgic-inv { background: #333; color: #666; }
-        .edgic-dead { background: #666; }
-        .edgic-na { background: #444; color: #888; }
+        /* UTR ratings - lightest tones */
+        .edgic-utr { background: #F4A460; color: white; } /* Sandy brown - neutral UTR */
+        .edgic-utrp { background: #DDA0DD; color: white; } /* Plum - positive UTR */
+        .edgic-utrn { background: #CD853F; color: white; } /* Peru - negative UTR */
+        .edgic-utrm { background: #D2691E; color: white; } /* Chocolate - mixed UTR */
+
+        /* MOR ratings - medium tones */
+        .edgic-mor { background: #FFD700; color: black; } /* Gold - neutral MOR */
+        .edgic-morp { background: #DA70D6; color: white; } /* Orchid - positive MOR */
+        .edgic-morn { background: #9370DB; color: white; } /* Medium slate blue - negative MOR */
+        .edgic-morm { background: #8FBC8F; color: white; } /* Dark sea green - mixed MOR */
+
+        /* CP ratings - strongest tones */
+        .edgic-cp { background: #20B2AA; color: white; } /* Light sea green - neutral CP */
+        .edgic-cpp { background: #4169E1; color: white; } /* Royal blue - positive CP */
+        .edgic-cpn { background: #8A2BE2; color: white; } /* Blue violet - negative CP */
+        .edgic-cpm { background: #008B8B; color: white; } /* Dark cyan - mixed CP */
+
+        /* OTT ratings - most dramatic */
+        .edgic-ott { background: #32CD32; color: white; } /* Lime green - neutral OTT */
+        .edgic-ottp { background: #00FF7F; color: white; } /* Spring green - positive OTT */
+        .edgic-ottn { background: #FF0000; color: white; } /* Red - negative OTT */
+        .edgic-ottm { background: #228B22; color: white; } /* Forest green - mixed OTT */
+
+        /* Special cases */
+        .edgic-inv { background: #333; color: #666; } /* Invisible */
+        .edgic-dead { background: #666; color: #ccc; } /* Dead */
+        .edgic-na { background: #444; color: #888; } /* Not available */
 
         .killer-reveal {
             background: linear-gradient(135deg, #8e24aa, #5e35b1);
@@ -433,6 +455,7 @@
                     </select>
                 </div>
                 <button class="btn" onclick="setupCast()" id="create-cast-btn">Create Cast</button>
+                <button class="btn btn-secondary" onclick="alert('Test button works!')" style="margin-left: 10px;">Test Button</button>
             </div>
 
             <div id="cast-customization" class="section hidden">
@@ -792,21 +815,52 @@
                 gameState.killers.push(killer);
             }
             
-            document.getElementById('killer-targets').innerHTML = `
+            // Show who the other killers are (if any)
+            const otherKillers = gameState.killers.filter(k => k.id !== killer.id);
+            let killerInfo = `
                 <h3>Playing as: ${killer.name} (${killer.archetype.name})</h3>
-                <p style="color: #ff6666; margin-bottom: 15px;">You are the killer! You'll get action choices throughout the movie...</p>
+                <p style="color: #ff4444; margin-bottom: 15px;">You are the killer! You'll get action choices throughout the movie...</p>
+            `;
+            
+            if (otherKillers.length > 0) {
+                killerInfo += `
+                    <div style="background: rgba(142, 36, 170, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #8e24aa;">
+                        <h4 style="color: #e1bee7; margin-bottom: 10px;">🤝 YOUR ACCOMPLICE${otherKillers.length > 1 ? 'S' : ''}:</h4>
+                        ${otherKillers.map(accomplice => `
+                            <div style="color: #e1bee7; margin-bottom: 8px;">
+                                <strong>${accomplice.name}</strong> (${accomplice.archetype.name}) - Stealth: ${accomplice.stats.stealth}/10, Intelligence: ${accomplice.stats.intelligence}/10
+                            </div>
+                        `).join('')}
+                        <p style="color: #ddd; font-size: 0.9rem; margin-top: 10px; font-style: italic;">
+                            You're working together! They'll also be killing victims throughout the movie. Coordinate your terror campaign!
+                        </p>
+                    </div>
+                `;
+            } else {
+                killerInfo += `
+                    <div style="background: rgba(142, 36, 170, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #8e24aa;">
+                        <p style="color: #e1bee7; font-style: italic;">
+                            🔪 You're flying solo - it's all up to you to terrorize the victims!
+                        </p>
+                    </div>
+                `;
+            }
+            
+            killerInfo += `
                 <div style="background: rgba(255, 68, 68, 0.1); padding: 15px; border-radius: 8px;">
                     <p style="color: #ccc; margin: 0;">The movie will start soon. Watch for killer action prompts during the story!</p>
                 </div>
                 <div id="killer-action-area"></div>
             `;
+            
+            document.getElementById('killer-targets').innerHTML = killerInfo;
         }
 
         function showKillerActions() {
             if (!gameState.isKillerMode || !gameState.killerPlayer) return;
             
             const aliveVictims = gameState.characters.filter(c => 
-                c.status === 'Alive' && c.id !== gameState.killerPlayer.id
+                c.status === 'Alive' && c.id !== gameState.killerPlayer.id && !gameState.killers.includes(c)
             );
             
             if (aliveVictims.length === 0) {
@@ -814,8 +868,19 @@
                 return;
             }
             
+            const otherKillers = gameState.killers.filter(k => k.id !== gameState.killerPlayer.id && k.status === 'Alive');
+            let accompliceInfo = '';
+            if (otherKillers.length > 0) {
+                accompliceInfo = `
+                    <div style="background: rgba(142, 36, 170, 0.15); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                        <small style="color: #e1bee7;">🤝 Working with: ${otherKillers.map(k => k.name).join(', ')}</small>
+                    </div>
+                `;
+            }
+            
             const actionArea = document.getElementById('killer-action-area');
             actionArea.innerHTML = `
+                ${accompliceInfo}
                 <div style="background: rgba(255, 68, 68, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #ff4444;">
                     <h4 style="color: #ff4444; margin-bottom: 15px;">🔪 KILLER ACTIONS AVAILABLE</h4>
                     <p style="color: #ccc; margin-bottom: 15px;">Choose your next move carefully. Each action has consequences...</p>
@@ -930,7 +995,7 @@
             // Hide action menu and advance story
             document.getElementById('killer-action-area').innerHTML = '<p style="color: #666;">Action completed. Continuing story...</p>';
             
-            // Show the force killer action button again after completing an action
+            // Resume automatic story progression and show force button again
             setTimeout(() => {
                 const forceKillerBtn = document.getElementById('force-killer-action');
                 if (forceKillerBtn && gameState.isKillerMode && gameState.killerPlayer) {
@@ -939,11 +1004,17 @@
                     );
                     if (aliveVictims.length > 0) {
                         forceKillerBtn.style.display = 'inline-block';
+                        document.getElementById('killer-help-text').style.display = 'block';
                     }
                 }
                 
                 // Clear the "action completed" message
                 document.getElementById('killer-action-area').innerHTML = '';
+                
+                // Continue story automatically after killer action
+                if (!gameState.autoPlay) {
+                    setTimeout(() => continueStory(), 1000);
+                }
             }, 3000);
             
             // Resume automatic story progression
@@ -962,7 +1033,7 @@
 
         function performPsychOut() {
             const aliveVictims = gameState.characters.filter(c => 
-                c.status === 'Alive' && c.id !== gameState.killerPlayer.id
+                c.status === 'Alive' && c.id !== gameState.killerPlayer.id && !gameState.killers.includes(c)
             );
             
             if (aliveVictims.length === 0) return;
@@ -1001,13 +1072,19 @@
                 const forceKillerBtn = document.getElementById('force-killer-action');
                 if (forceKillerBtn && gameState.isKillerMode && gameState.killerPlayer) {
                     const aliveVictims = gameState.characters.filter(c => 
-                        c.status === 'Alive' && c.id !== gameState.killerPlayer.id
+                        c.status === 'Alive' && c.id !== gameState.killerPlayer.id && !gameState.killers.includes(c)
                     );
                     if (aliveVictims.length > 0) {
                         forceKillerBtn.style.display = 'inline-block';
+                        document.getElementById('killer-help-text').style.display = 'block';
                     }
                 }
                 document.getElementById('killer-action-area').innerHTML = '';
+                
+                // Continue story automatically after killer action
+                if (!gameState.autoPlay) {
+                    setTimeout(() => continueStory(), 1000);
+                }
             }, 3000);
             
             setTimeout(() => {
@@ -2247,36 +2324,99 @@
                 return;
             }
             
-            // ALL survivors who engage in final confrontation get attacked status
-            survivors.forEach(survivor => {
-                attackCharacter(survivor, 3);
+            // Ensure at least one survivor dies in Act 3 for drama
+            const survivorsToKill = Math.max(1, Math.floor(survivors.length * 0.4)); // Kill at least 1, up to 40% of remaining
+            const survivorsToAttack = Math.min(survivors.length - survivorsToKill, 3); // Attack some others but don't kill them
+            
+            // Select victims for final deaths
+            const shuffledSurvivors = [...survivors].sort(() => Math.random() - 0.5);
+            const victimsToKill = shuffledSurvivors.slice(0, survivorsToKill);
+            const victimsToAttack = shuffledSurvivors.slice(survivorsToKill, survivorsToKill + survivorsToAttack);
+            
+            // Final confrontation begins
+            addEvent('event', 'The final confrontation erupts into chaos as the killer makes their last desperate stand!');
+            
+            // Kill some survivors during the battle
+            victimsToKill.forEach((victim, index) => {
+                const killer = gameState.killers[Math.floor(Math.random() * gameState.killers.length)];
+                
+                const finalKillScenarios = [
+                    `${victim.name} heroically tries to protect the others but ${killer.name} catches them off guard and delivers a fatal blow!`,
+                    `${victim.name} gets cornered during the chaos and ${killer.name} shows no mercy - another life claimed in the final battle!`,
+                    `${victim.name} makes a brave last stand but ${killer.name} overpowers them in the brutal melee!`,
+                    `${victim.name} almost escapes but ${killer.name} grabs them at the last second - their sacrifice won't be forgotten!`,
+                    `${victim.name} fights valiantly but ${killer.name} strikes them down in the climactic struggle!`,
+                    `${victim.name} tries to help a fallen friend and ${killer.name} takes advantage of their compassion - a tragic end!`,
+                    `${victim.name} refuses to abandon the others and pays the ultimate price when ${killer.name} attacks!`
+                ];
+                
+                const scenario = finalKillScenarios[Math.floor(Math.random() * finalKillScenarios.length)];
+                addEvent('death', `💀 FINAL ACT DEATH: ${scenario}`);
+                
+                const finalWords = [
+                    `"At least... the others... will make it..." - ${victim.name}, with their dying breath`,
+                    `"Tell my family... I tried to be brave..." - ${victim.name}, fading away`,
+                    `"Don't let... this be... for nothing..." - ${victim.name}, looking at the other survivors`,
+                    `"I'm sorry... I couldn't... protect everyone..." - ${victim.name}, tears in their eyes`,
+                    `"Make sure... they pay... for what they've done..." - ${victim.name}, determined to the end`,
+                    `"It's up to you now... finish this..." - ${victim.name}, passing the torch`,
+                    `"I'm not afraid... anymore..." - ${victim.name}, finding peace`,
+                    `"Remember me... as I lived... not how I died..." - ${victim.name}, smiling weakly`
+                ];
+                
+                addEvent('dialogue', finalWords[Math.floor(Math.random() * finalWords.length)]);
+                killCharacter(victim, killer, 3);
+                
+                // Add reaction from other survivors
+                const remainingSurvivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+                if (remainingSurvivors.length > 0) {
+                    const reactor = remainingSurvivors[Math.floor(Math.random() * remainingSurvivors.length)];
+                    const reactions = [
+                        `"NO! ${victim.name}!" - ${reactor.name}, screaming in anguish`,
+                        `"This has to stop! No more death!" - ${reactor.name}, filled with rage`,
+                        `"${victim.name}, I won't let you die in vain!" - ${reactor.name}, determined`,
+                        `"We have to end this madness NOW!" - ${reactor.name}, rallying the others`
+                    ];
+                    addEvent('dialogue', reactions[Math.floor(Math.random() * reactions.length)]);
+                }
             });
             
-            // Generate attack descriptions for the confrontation
-            const fightingSurvivors = survivors.slice(0, Math.min(3, survivors.length));
-            fightingSurvivors.forEach(survivor => {
+            // Attack but don't kill some other survivors
+            victimsToAttack.forEach(victim => {
                 const attackMethods = [
-                    `${survivor.name} is slashed across the chest during the fight`,
-                    `${survivor.name} is thrown against the wall but keeps fighting`,
-                    `${survivor.name} is stabbed in the shoulder but doesn't give up`,
-                    `${survivor.name} is knocked down but struggles back to their feet`,
-                    `${survivor.name} takes a brutal hit but refuses to stay down`
+                    `${victim.name} is slashed across the chest during the fight but keeps going`,
+                    `${victim.name} is thrown against the wall but struggles back to their feet`,
+                    `${victim.name} is stabbed in the shoulder but refuses to give up`,
+                    `${victim.name} takes a brutal hit but their determination keeps them fighting`,
+                    `${victim.name} is knocked down but crawls back into the fray`
                 ];
                 const method = attackMethods[Math.floor(Math.random() * attackMethods.length)];
                 addEvent('attack', `⚠️ ${method}!`);
+                attackCharacter(victim, 3);
             });
             
-            // Final battle
-            const finalGirl = survivors.find(s => s.archetype.name === 'The Final Girl') || survivors[0];
-            const killerName = gameState.killers[0].name;
-            const otherSurvivor = survivors.find(s => s !== finalGirl);
+            // Check if anyone is left to face the killer
+            const finalSurvivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
             
-            addEvent('event', `${finalGirl.name} confronts ${killerName} in a final desperate battle!`);
+            if (finalSurvivors.length === 0) {
+                // Everyone died - killer wins
+                addEvent('reveal', '💀 THE KILLER WINS! All survivors have fallen in the final battle...');
+                addEvent('title', '🎬 THE END - KILLER VICTORY 🎬');
+                generateEdgicRatings(3);
+                return;
+            }
+            
+            // Final battle with remaining survivors
+            const finalGirl = finalSurvivors.find(s => s.archetype.name === 'The Final Girl') || finalSurvivors[0];
+            const killerName = gameState.killers[0].name;
+            const otherSurvivor = finalSurvivors.find(s => s !== finalGirl);
+            
+            addEvent('event', `${finalGirl.name} faces ${killerName} in the ultimate showdown while standing over the bodies of the fallen!`);
             
             if (otherSurvivor) {
-                addEvent('dialogue', `"${finalGirl.name}, I'll distract them! Run!" - ${otherSurvivor.name}`);
+                addEvent('dialogue', `"This is for ${victimsToKill[0]?.name || 'everyone we lost'}!" - ${otherSurvivor.name}, backing up ${finalGirl.name}`);
             }
-            addEvent('dialogue', `"This ends now, ${killerName}! You killed ${gameState.characters.find(c => c.deathAct === 1 && c.status === 'Dead')?.name || 'my friends'} and I won't let you hurt anyone else!" - ${finalGirl.name}`);
+            addEvent('dialogue', `"You killed ${victimsToKill.map(v => v.name).join(' and ')}! This ends NOW!" - ${finalGirl.name}, furious and determined`);
             
             // Defeat killer
             defeatKiller(finalGirl);
@@ -2325,15 +2465,15 @@
                 }
                 
                 if (character.status === 'Dead' && character.deathAct === act) {
-                    // Death episode gets high visibility - more dramatic ratings
-                    const deathRatings = ['CP5', 'MOR5', 'MORP5', 'CPM5', 'OTTM4'];
+                    // Death episode gets high visibility - more dramatic ratings with varied tones, more OTT
+                    const deathRatings = ['CP5', 'MOR5', 'MORP5', 'CPM5', 'OTTM4', 'CPN4', 'MORN4', 'OTT4', 'OTTN4', 'OTTP4', 'OTT3', 'OTTM3'];
                     character.edgic[act] = deathRatings[Math.floor(Math.random() * deathRatings.length)];
                     return;
                 }
                 
                 if (character.actStatuses[act] === 'Attacked') {
-                    // Attacked characters get moderate to high visibility
-                    const attackRatings = ['MOR4', 'CPP3', 'MOR3', 'CP3', 'MORP4', 'MORP3'];
+                    // Attacked characters get moderate to high visibility with varied tones, some OTT for drama
+                    const attackRatings = ['MOR4', 'CPP3', 'MOR3', 'CP3', 'MORP4', 'MORP3', 'CPN3', 'MORN3', 'OTT3', 'OTTM3', 'OTTN3', 'OTTP3'];
                     character.edgic[act] = attackRatings[Math.floor(Math.random() * attackRatings.length)];
                     return;
                 }
@@ -2341,81 +2481,81 @@
                 if (gameState.killers.includes(character)) {
                     // Killers need different edits depending on the act
                     if (act === 3) {
-                        // Act 3: Killer reveal - MUST be dramatic NEGATIVE visibility for overdramatic speeches
-                        const killerRevealRatings = ['OTTN5', 'CPN5', 'OTTM5', 'CPM5', 'MORN5', 'OTTN4', 'CPN4'];
+                        // Act 3: Killer reveal - MUST be dramatic NEGATIVE or MIXED visibility - NO POSITIVE EVER
+                        const killerRevealRatings = ['OTTN5', 'OTTN5', 'CPN5', 'OTTM5', 'OTTM4', 'CPM5', 'MORN5', 'OTTN4', 'CPN4', 'CPM4', 'MORN4', 'OTTM3', 'CPN3'];
                         character.edgic[act] = killerRevealRatings[Math.floor(Math.random() * killerRevealRatings.length)];
                     } else {
-                        // Act 1-2: Hidden killer - mix of MOR and some suspicious moments
-                        const hiddenKillerRatings = ['MOR2', 'MOR3', 'UTR2', 'MORN2', 'CPM2', 'MOR1'];
+                        // Act 1-2: Hidden killer - mix of ratings, occasionally negative/mixed for hints, some OTT for dramatic moments
+                        const hiddenKillerRatings = ['MOR2', 'MOR3', 'UTR2', 'MORN2', 'CPM2', 'MOR1', 'MORN1', 'CPN2', 'UTRN2', 'MORM2', 'OTTM2', 'OTTN2', 'OTT2'];
                         character.edgic[act] = hiddenKillerRatings[Math.floor(Math.random() * hiddenKillerRatings.length)];
                     }
                     return;
                 }
                 
-                // Final girl gets strong edits that build over time - should be CP at least once
+                // Final girl gets strong edits that build over time with positive/neutral tones
                 if (character.archetype.name === 'The Final Girl') {
                     if (act === 1) {
-                        const finalGirlEarly = ['CP3', 'MORP3', 'MOR3', 'CPP2'];
+                        const finalGirlEarly = ['CP3', 'MORP3', 'MOR3', 'CPP2', 'MORP2'];
                         character.edgic[act] = finalGirlEarly[Math.floor(Math.random() * finalGirlEarly.length)];
                     } else if (act === 2) {
-                        const finalGirlMid = ['CP4', 'CPP3', 'MORP4', 'MOR4'];
+                        const finalGirlMid = ['CP4', 'CPP3', 'MORP4', 'MOR4', 'CPP4'];
                         character.edgic[act] = finalGirlMid[Math.floor(Math.random() * finalGirlMid.length)];
                     } else {
-                        const finalGirlEnd = ['CP5', 'CPP5', 'MORP5', 'CP4'];
+                        const finalGirlEnd = ['CP5', 'CPP5', 'MORP5', 'CP4', 'CPP4'];
                         character.edgic[act] = finalGirlEnd[Math.floor(Math.random() * finalGirlEnd.length)];
                     }
                     return;
                 }
                 
-                // Other main character archetypes get at least one CP rating
+                // Other main character archetypes get varied tones including some CP ratings
                 if (character.archetype.name === 'The Hero' || character.archetype.name === 'The Best Friend' || character.archetype.name === 'The Boyfriend') {
                     const mainCharacterChance = Math.random();
                     if (mainCharacterChance < 0.4) { // 40% chance for CP rating
-                        const mainCharCPRatings = ['CP3', 'CPP3', 'CPN2', 'CP2', 'CPM3'];
+                        const mainCharCPRatings = ['CP3', 'CPP3', 'CPN2', 'CP2', 'CPM3', 'CPP2', 'CPN3'];
                         character.edgic[act] = mainCharCPRatings[Math.floor(Math.random() * mainCharCPRatings.length)];
                     } else {
-                        const mainCharMORRatings = ['MOR3', 'MORP3', 'MOR4', 'MORN2'];
+                        const mainCharMORRatings = ['MOR3', 'MORP3', 'MOR4', 'MORN2', 'MORP2', 'MORM3'];
                         character.edgic[act] = mainCharMORRatings[Math.floor(Math.random() * mainCharMORRatings.length)];
                     }
                     return;
                 }
                 
-                // Suspicious characters get more complex edits - but less OTT
+                // Suspicious characters get more complex edits with negative/mixed tones, some OTT
                 if (character.archetype.name === 'The Bad Boy' || character.archetype.name === 'The Outcast') {
-                    const suspiciousRatings = ['CPM3', 'MORN3', 'CPN2', 'MOR3', 'MORN2', 'CPM2'];
+                    const suspiciousRatings = ['CPM3', 'MORN3', 'CPN2', 'MOR3', 'MORN2', 'CPM2', 'MORM2', 'UTRN2', 'OTT2', 'OTTM2', 'OTTN2'];
                     character.edgic[act] = suspiciousRatings[Math.floor(Math.random() * suspiciousRatings.length)];
                     return;
                 }
                 
-                // Comic relief and other characters - MOR is most common
-                if (character.archetype.name === 'The Stoner' || character.archetype.name === 'The Prankster') {
-                    const comicRatings = ['MOR2', 'MORP2', 'UTR2', 'MOR1', 'UTRP2', 'MOR3'];
+                // Comic relief and other light characters - mostly positive/neutral
+                if (character.archetype.name === 'The Stoner' || character.archetype.name === 'The Party Girl') {
+                    const comicRatings = ['MOR2', 'MORP2', 'UTR2', 'MOR1', 'UTRP2', 'MOR3', 'MORP1', 'UTRP1'];
                     character.edgic[act] = comicRatings[Math.floor(Math.random() * comicRatings.length)];
                     return;
                 }
                 
-                // New archetypes - Reporter and Horror Fanatic get decent visibility
+                // New archetypes - Reporter and Horror Fanatic get decent visibility with varied tones, some OTT
                 if (character.archetype.name === 'The Reporter') {
-                    const reporterRatings = ['MOR3', 'CPP3', 'MOR4', 'CP3', 'MORP3', 'CP2'];
+                    const reporterRatings = ['MOR3', 'CPP3', 'MOR4', 'CP3', 'MORP3', 'CP2', 'MORP4', 'CPN2', 'OTT3', 'OTTP3', 'OTTM2'];
                     character.edgic[act] = reporterRatings[Math.floor(Math.random() * reporterRatings.length)];
                     return;
                 }
                 
                 if (character.archetype.name === 'The Horror Fanatic') {
-                    const fanRatings = ['MOR3', 'MORP3', 'MOR2', 'CP3', 'MORP4', 'CPP2'];
+                    const fanRatings = ['MOR3', 'MORP3', 'MOR2', 'CP3', 'MORP4', 'CPP2', 'MORN2', 'CPM2', 'OTT2', 'OTTP2', 'OTTM3'];
                     character.edgic[act] = fanRatings[Math.floor(Math.random() * fanRatings.length)];
                     return;
                 }
                 
-                // Early boot candidates - mix of MOR and UTR
+                // Early boot candidates - mix of tones but lower visibility
                 if (character.archetype.name === 'The Flirt' || character.archetype.name === 'The Rich Girl' || character.archetype.name === 'The Drama Queen') {
-                    const earlyBootRatings = ['MOR1', 'MOR2', 'UTR1', 'UTR2', 'MORN1', 'MORP2'];
+                    const earlyBootRatings = ['MOR1', 'MOR2', 'UTR1', 'UTR2', 'MORN1', 'MORP2', 'UTRN1', 'UTRP1', 'MORM1'];
                     character.edgic[act] = earlyBootRatings[Math.floor(Math.random() * earlyBootRatings.length)];
                     return;
                 }
                 
-                // Everyone else gets MOR as most common, with some variety
-                const regularRatings = ['MOR1', 'MOR2', 'MOR2', 'MOR3', 'UTR1', 'UTR2', 'MORP2', 'MORN2'];
+                // Everyone else gets varied tones with MOR being most common, sprinkle in some OTT
+                const regularRatings = ['MOR1', 'MOR2', 'MOR2', 'MOR3', 'UTR1', 'UTR2', 'MORP2', 'MORN2', 'UTRP1', 'UTRN1', 'MORM1', 'UTRM1', 'OTT1', 'OTT2', 'OTTP1', 'OTTN1', 'OTTM1'];
                 character.edgic[act] = regularRatings[Math.floor(Math.random() * regularRatings.length)];
             });
         }
@@ -2472,6 +2612,20 @@
                     updateMovieControls();
                 }
                 updateStoryStatus();
+                
+                // Check if we should offer killer actions
+                if (gameState.isKillerMode && gameState.killerPlayer && !gameState.movieComplete) {
+                    const aliveVictims = gameState.characters.filter(c => 
+                        c.status === 'Alive' && c.id !== gameState.killerPlayer.id
+                    );
+                    
+                    if (aliveVictims.length > 0 && Math.random() < 0.4) { // 40% chance to offer killer actions
+                        showKillerActions();
+                        document.getElementById('force-killer-action').style.display = 'inline-block';
+                        document.getElementById('killer-help-text').style.display = 'block';
+                        updateStoryStatus();
+                    }
+                }
             }
         }
 
@@ -2479,6 +2633,20 @@
             if (gameState.currentStoryIndex >= gameState.storyQueue.length) {
                 // Story queue is empty
                 updateStoryStatus();
+                
+                // Check if we should offer killer actions when queue is empty
+                if (gameState.isKillerMode && gameState.killerPlayer && !gameState.movieComplete) {
+                    const aliveVictims = gameState.characters.filter(c => 
+                        c.status === 'Alive' && c.id !== gameState.killerPlayer.id
+                    );
+                    
+                    if (aliveVictims.length > 0) {
+                        showKillerActions();
+                        document.getElementById('force-killer-action').style.display = 'inline-block';
+                        document.getElementById('killer-help-text').style.display = 'block';
+                        updateStoryStatus();
+                    }
+                }
                 return;
             }
             
@@ -2492,6 +2660,26 @@
             
             gameState.currentStoryIndex++;
             updateStoryStatus();
+            
+            // Check for killer action opportunities during story progression
+            if (gameState.isKillerMode && gameState.killerPlayer && !gameState.movieComplete) {
+                const aliveVictims = gameState.characters.filter(c => 
+                    c.status === 'Alive' && c.id !== gameState.killerPlayer.id
+                );
+                
+                if (aliveVictims.length > 0) {
+                    // Random chance to offer killer actions during story events
+                    if (Math.random() < 0.3) { // 30% chance during story progression
+                        setTimeout(() => {
+                            showKillerActions();
+                            document.getElementById('force-killer-action').style.display = 'inline-block';
+                            document.getElementById('killer-help-text').style.display = 'block';
+                            updateStoryStatus();
+                        }, 1000);
+                        return; // Don't auto-continue, wait for killer action
+                    }
+                }
+            }
             
             if (gameState.autoPlay && gameState.currentStoryIndex < gameState.storyQueue.length) {
                 setTimeout(() => playNextStoryEvent(), event.delay || 2000);
@@ -2833,7 +3021,12 @@
                     </div>
                 </div>
                 <div style="margin-top: 15px; padding: 10px; background: rgba(255, 68, 68, 0.1); border-radius: 5px; font-size: 0.9rem; color: #ccc;">
-                    <strong>Examples:</strong> CP5 = Complex Personality with maximum visibility | MORN3 = Middle of the Road with negative tone and moderate visibility | UTR1 = Under the radar with minimal screen time
+                    <strong>Color Guide:</strong> 
+                    <span style="color: #DDA0DD;">■</span> <strong>Positive (P)</strong> - Light purple/pink tones | 
+                    <span style="color: #FFD700;">■</span> <strong>Neutral</strong> - Gold/teal tones | 
+                    <span style="color: #9370DB;">■</span> <strong>Negative (N)</strong> - Dark purple/red tones | 
+                    <span style="color: #8FBC8F;">■</span> <strong>Mixed (M)</strong> - Green tones
+                    <br><strong>Examples:</strong> CP5 = Complex Personality with maximum visibility | MORN3 = Middle of the Road with negative tone and moderate visibility | UTRP1 = Under the radar with positive tone and minimal screen time
                 </div>
             `;
             
@@ -2845,10 +3038,44 @@
         function getEdgicClass(rating) {
             if (rating === 'N/A') return 'edgic-na';
             if (rating === 'DEAD') return 'edgic-dead';
-            if (rating.includes('CP')) return 'edgic-cp';
-            if (rating.includes('MOR')) return 'edgic-mor';
-            if (rating.includes('UTR')) return 'edgic-utr';
-            if (rating.includes('OTT')) return 'edgic-ott';
+            if (rating === 'INV') return 'edgic-inv';
+            
+            // Convert rating to lowercase for easier matching
+            const lowerRating = rating.toLowerCase();
+            
+            // UTR ratings
+            if (lowerRating.includes('utr')) {
+                if (lowerRating.includes('p')) return 'edgic-utrp';
+                if (lowerRating.includes('n')) return 'edgic-utrn';
+                if (lowerRating.includes('m')) return 'edgic-utrm';
+                return 'edgic-utr';
+            }
+            
+            // MOR ratings
+            if (lowerRating.includes('mor')) {
+                if (lowerRating.includes('p')) return 'edgic-morp';
+                if (lowerRating.includes('n')) return 'edgic-morn';
+                if (lowerRating.includes('m')) return 'edgic-morm';
+                return 'edgic-mor';
+            }
+            
+            // CP ratings
+            if (lowerRating.includes('cp')) {
+                if (lowerRating.includes('p')) return 'edgic-cpp';
+                if (lowerRating.includes('n')) return 'edgic-cpn';
+                if (lowerRating.includes('m')) return 'edgic-cpm';
+                return 'edgic-cp';
+            }
+            
+            // OTT ratings
+            if (lowerRating.includes('ott')) {
+                if (lowerRating.includes('p')) return 'edgic-ottp';
+                if (lowerRating.includes('n')) return 'edgic-ottn';
+                if (lowerRating.includes('m')) return 'edgic-ottm';
+                return 'edgic-ott';
+            }
+            
+            // Fallback
             return 'edgic-inv';
         }
 
@@ -2899,6 +3126,17 @@
                                 <option value="6">6 new characters</option>
                                 <option value="7">7 new characters</option>
                                 <option value="8">8 new characters</option>
+                                <option value="9">9 new characters</option>
+                                <option value="10">10 new characters</option>
+                                <option value="12">12 new characters</option>
+                                <option value="15">15 new characters</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sequel-game-mode">Game Mode</label>
+                            <select id="sequel-game-mode">
+                                <option value="spectator">Spectator (Killer hidden)</option>
+                                <option value="killer">Play as Killer</option>
                             </select>
                         </div>
                     </div>
@@ -2983,6 +3221,7 @@
             const sequelTitle = document.getElementById('sequel-title').value || generateSequelTitle(gameState.movieTitle);
             const sequelYear = parseInt(document.getElementById('sequel-year').value) || (gameState.movieYear + 1);
             const newCharactersCount = parseInt(document.getElementById('new-characters-count').value) || 4;
+            const sequelGameMode = document.getElementById('sequel-game-mode').value;
             
             // Remove selection screen
             const selectionScreen = document.getElementById('survivor-selection-screen');
@@ -2991,7 +3230,7 @@
             }
             
             // Create sequel with selected survivors and configuration
-            createSequelWithSurvivors(selectedSurvivors, sequelTitle, sequelYear, newCharactersCount);
+            createSequelWithSurvivors(selectedSurvivors, sequelTitle, sequelYear, newCharactersCount, sequelGameMode);
         }
         
         function cancelSurvivorSelection() {
@@ -3003,7 +3242,7 @@
             document.getElementById('results-screen').classList.remove('hidden');
         }
         
-        function createSequelWithSurvivors(selectedSurvivors, sequelTitle, sequelYear, newCharactersCount) {
+        function createSequelWithSurvivors(selectedSurvivors, sequelTitle, sequelYear, newCharactersCount, sequelGameMode) {
             // Remove any existing franchise history table (will be recreated with updated data)
             const existingFranchiseTable = document.querySelector('.franchise-history');
             if (existingFranchiseTable) {
@@ -3014,12 +3253,12 @@
             gameState = {
                 characters: [],
                 killers: [],
-                gameMode: 'spectator',
+                gameMode: sequelGameMode,
                 currentAct: 1,
                 movieTitle: sequelTitle,
                 movieYear: sequelYear,
                 events: [],
-                isKillerMode: false,
+                isKillerMode: sequelGameMode === 'killer',
                 killerPlayer: null,
                 autoPlay: false,
                 movieComplete: false,
@@ -3103,16 +3342,17 @@
             document.getElementById('setup-screen').classList.remove('hidden');
             document.getElementById('cast-customization').classList.remove('hidden');
             
-            // Update the movie title field
+            // Update the movie title and year fields
             document.getElementById('movie-title').value = gameState.movieTitle;
             document.getElementById('movie-year').value = gameState.movieYear;
+            document.getElementById('game-mode').value = gameState.gameMode;
             
             // Show sequel cast
             displayCastCustomization();
             
             // Show sequel message
             setTimeout(() => {
-                alert(`🎬 SEQUEL CREATED! 🎬\n\n"${gameState.movieTitle}" (${gameState.movieYear})\n\n${selectedSurvivors.length} selected survivor(s) return with boosted stats and ${newCharactersCount} new victims... I mean, characters!\n\nReturning characters are highlighted in green and have improved survival skills from their previous experience.`);
+                alert(`🎬 SEQUEL CREATED! 🎬\n\n"${gameState.movieTitle}" (${gameState.movieYear})\n\nMode: ${gameState.gameMode === 'killer' ? 'Play as Killer' : 'Spectator'}\n${selectedSurvivors.length} selected survivor(s) return with boosted stats and ${newCharactersCount} new victims... I mean, characters!\n\nReturning characters are highlighted in green and have improved survival skills from their previous experience.${gameState.gameMode === 'killer' ? '\n\nYou can now select which character to play as the killer!' : ''}`);
             }, 500);
         }
         
