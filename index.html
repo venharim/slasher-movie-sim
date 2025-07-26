@@ -1,15 +1,17 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slasher Movie Simulator</title>
-    <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Slasher Movie Simulator</title>
+<style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
 
         @keyframes bloodDrip {
             0% { transform: translateY(-10px); opacity: 0; }
@@ -17,21 +19,25 @@
             100% { transform: translateY(20px); opacity: 0; }
         }
 
+
         @keyframes flicker {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+
 
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
 
+
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
             75% { transform: translateX(5px); }
         }
+
 
         @keyframes fadeInUp {
             from { 
@@ -44,10 +50,12 @@
             }
         }
 
+
         @keyframes shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
         }
+
 
         @keyframes minimizeWidget {
             from { transform: scale(1); }
@@ -55,18 +63,22 @@
             to { transform: scale(1); }
         }
 
+
         @keyframes maximizeWidget {
             from { transform: scale(0.95); }
             to { transform: scale(1); }
         }
 
+
         .audio-controls.minimizing {
             animation: minimizeWidget 0.3s ease;
         }
 
+
         .audio-controls.maximizing {
             animation: maximizeWidget 0.3s ease;
         }
+
 
         .blood-particle {
             position: absolute;
@@ -78,17 +90,21 @@
             pointer-events: none;
         }
 
+
         .flicker-effect {
             animation: flicker 0.3s ease-in-out;
         }
+
 
         .pulse-effect {
             animation: pulse 0.5s ease-in-out;
         }
 
+
         .shake-effect {
             animation: shake 0.5s ease-in-out;
         }
+
 
         .audio-controls {
             position: fixed;
@@ -106,24 +122,29 @@
             min-width: 200px;
         }
 
+
         .audio-controls:hover {
             border-color: #ff4444;
             box-shadow: 0 4px 25px rgba(255, 68, 68, 0.3);
         }
+
 
         .audio-controls.minimized {
             padding: 8px 12px;
             min-width: auto;
         }
 
+
         .audio-controls.minimized .audio-content {
             display: none;
         }
+
 
         .audio-controls.dragging {
             transition: none;
             cursor: grabbing;
         }
+
 
         .audio-header {
             display: flex;
@@ -135,9 +156,11 @@
             border-bottom: 1px solid #555;
         }
 
+
         .audio-header:active {
             cursor: grabbing;
         }
+
 
         .audio-title {
             color: #fff;
@@ -147,6 +170,7 @@
             align-items: center;
             gap: 6px;
         }
+
 
         .minimize-btn {
             background: #555 !important;
@@ -160,14 +184,17 @@
             transition: all 0.2s ease;
         }
 
+
         .minimize-btn:hover {
             background: #ff4444 !important;
             transform: scale(1.1);
         }
 
+
         .audio-content {
             transition: all 0.3s ease;
         }
+
 
         .audio-controls button {
             background: #ff4444;
@@ -181,28 +208,34 @@
             transition: all 0.2s ease;
         }
 
+
         .audio-controls button:hover {
             background: #ff6666;
             transform: translateY(-1px);
         }
 
+
         .audio-controls button.muted {
             background: #666;
         }
+
 
         .volume-slider {
             width: 80px;
             margin-left: 10px;
         }
 
+
         .drag-indicator {
             opacity: 0.5;
             transition: opacity 0.2s ease;
         }
 
+
         .audio-header:hover .drag-indicator {
             opacity: 1;
         }
+
 
         body {
             font-family: 'Arial', sans-serif;
@@ -212,15 +245,18 @@
             padding: 20px;
         }
 
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
 
+
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
+
 
         .header h1 {
             font-size: 3rem;
@@ -229,16 +265,19 @@
             margin-bottom: 10px;
         }
 
+
         .header .subtitle {
             color: #ccc;
             font-size: 1.2rem;
             margin-bottom: 5px;
         }
 
+
         .header .tagline {
             color: #ff6666;
             font-style: italic;
         }
+
 
         .section {
             background: rgba(30, 30, 30, 0.9);
@@ -248,6 +287,7 @@
             margin-bottom: 25px;
         }
 
+
         .section h2 {
             color: #ff4444;
             font-size: 1.8rem;
@@ -255,9 +295,11 @@
             text-transform: uppercase;
         }
 
+
         .form-group {
             margin-bottom: 20px;
         }
+
 
         label {
             display: block;
@@ -265,6 +307,7 @@
             font-weight: bold;
             color: #fff;
         }
+
 
         input, select, textarea {
             width: 100%;
@@ -276,11 +319,13 @@
             font-size: 16px;
         }
 
+
         input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #ff4444;
             box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
         }
+
 
         .cast-grid {
             display: grid;
@@ -289,6 +334,7 @@
             margin-top: 20px;
         }
 
+
         .character-card {
             background: #333;
             border: 1px solid #555;
@@ -296,16 +342,19 @@
             padding: 20px;
         }
 
+
         .character-card.returning {
             border: 2px solid #4CAF50;
             background: rgba(76, 175, 80, 0.1);
         }
+
 
         .character-header {
             display: flex;
             align-items: center;
             margin-bottom: 15px;
         }
+
 
         .character-avatar {
             width: 60px;
@@ -319,15 +368,18 @@
             font-size: 24px;
         }
 
+
         .character-info h3 {
             margin-bottom: 5px;
             color: #fff;
         }
 
+
         .character-info .archetype {
             color: #ff4444;
             font-style: italic;
         }
+
 
         .stats-grid {
             display: grid;
@@ -336,15 +388,18 @@
             margin-top: 15px;
         }
 
+
         .stat {
             margin-bottom: 10px;
         }
+
 
         .stat-label {
             font-size: 12px;
             color: #ccc;
             margin-bottom: 3px;
         }
+
 
         .stat-bar {
             height: 8px;
@@ -353,6 +408,7 @@
             overflow: hidden;
         }
 
+
         .stat-fill {
             height: 100%;
             background: linear-gradient(90deg, #ff4444, #ff8888, #ffaa44);
@@ -360,6 +416,7 @@
             animation: shimmer 2s ease-in-out infinite;
             transition: width 0.3s ease;
         }
+
 
         .survival-chance {
             margin-top: 10px;
@@ -370,6 +427,7 @@
             font-weight: bold;
             color: #4CAF50;
         }
+
 
         .btn {
             background: linear-gradient(135deg, #ff4444, #cc3333);
@@ -385,19 +443,23 @@
             margin: 10px 5px;
         }
 
+
         .btn:hover {
             background: linear-gradient(135deg, #ff6666, #ff4444);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 68, 68, 0.4);
         }
 
+
         .btn-secondary {
             background: linear-gradient(135deg, #666, #444);
         }
 
+
         .btn-secondary:hover {
             background: linear-gradient(135deg, #777, #555);
         }
+
 
         .movie-log {
             background: #1a1a1a;
@@ -409,6 +471,7 @@
             overflow-y: auto;
         }
 
+
         .event {
             background: rgba(255, 68, 68, 0.1);
             border-left: 4px solid #ff4444;
@@ -418,6 +481,7 @@
             animation: fadeInUp 0.5s ease-out;
         }
 
+
         .event.title {
             border-left-color: #ff4444;
             background: rgba(255, 68, 68, 0.2);
@@ -426,11 +490,13 @@
             text-align: center;
         }
 
+
         .event.narrative {
             border-left-color: #888;
             background: rgba(136, 136, 136, 0.1);
             font-style: italic;
         }
+
 
         .event.killer-thought {
             border-left-color: #8e24aa;
@@ -439,12 +505,14 @@
             color: #e1bee7;
         }
 
+
         .event.death {
             border-left-color: #ff0000;
             background: rgba(255, 0, 0, 0.1);
             position: relative;
             overflow: hidden;
         }
+
 
         .event.death::before {
             content: '';
@@ -457,15 +525,18 @@
             pointer-events: none;
         }
 
+
         .event.attack {
             border-left-color: #ff8800;
             background: rgba(255, 136, 0, 0.1);
         }
 
+
         .event.reveal, .event.event {
             border-left-color: #8800ff;
             background: rgba(136, 0, 255, 0.1);
         }
+
 
         .event.dialogue {
             font-style: italic;
@@ -474,10 +545,12 @@
             background: rgba(102, 102, 102, 0.1);
         }
 
+
         .event.red-herring {
             background: rgba(255, 255, 0, 0.1);
             border-left-color: #ffff00;
         }
+
 
         .final-table {
             width: 100%;
@@ -488,6 +561,7 @@
             overflow: hidden;
         }
 
+
         .final-table th {
             background: #ff4444;
             color: white;
@@ -496,14 +570,17 @@
             font-weight: bold;
         }
 
+
         .final-table td {
             padding: 10px 12px;
             border-bottom: 1px solid #444;
         }
 
+
         .final-table tr:hover {
             background: rgba(255, 68, 68, 0.1);
         }
+
 
         .status-alive { background: #4CAF50; color: white; padding: 4px 8px; border-radius: 3px; }
         .status-dead { background: #f44336; color: white; padding: 4px 8px; border-radius: 3px; }
@@ -512,13 +589,16 @@
         .status-killer { background: #9c27b0; color: white; padding: 4px 8px; border-radius: 3px; }
         .status-n\/a { background: #666; color: #ccc; padding: 4px 8px; border-radius: 3px; }
 
+
         .edgic-table {
             margin-top: 30px;
         }
 
+
         .franchise-history {
             margin-top: 40px;
         }
+
 
         .franchise-history h3 {
             color: #ff4444;
@@ -527,6 +607,7 @@
             text-transform: uppercase;
         }
 
+
         .edgic-cell {
             text-align: center;
             font-weight: bold;
@@ -534,11 +615,13 @@
             border-radius: 3px;
         }
 
+
         /* UTR ratings - lightest tones */
         .edgic-utr { background: #F4A460; color: white; } /* Sandy brown - neutral UTR */
         .edgic-utrp { background: #DDA0DD; color: white; } /* Plum - positive UTR */
         .edgic-utrn { background: #CD853F; color: white; } /* Peru - negative UTR */
         .edgic-utrm { background: #D2691E; color: white; } /* Chocolate - mixed UTR */
+
 
         /* MOR ratings - medium tones */
         .edgic-mor { background: #FFD700; color: black; } /* Gold - neutral MOR */
@@ -546,11 +629,13 @@
         .edgic-morn { background: #9370DB; color: white; } /* Medium slate blue - negative MOR */
         .edgic-morm { background: #8FBC8F; color: white; } /* Dark sea green - mixed MOR */
 
+
         /* CP ratings - strongest tones */
         .edgic-cp { background: #20B2AA; color: white; } /* Light sea green - neutral CP */
         .edgic-cpp { background: #4169E1; color: white; } /* Royal blue - positive CP */
         .edgic-cpn { background: #8A2BE2; color: white; } /* Blue violet - negative CP */
         .edgic-cpm { background: #008B8B; color: white; } /* Dark cyan - mixed CP */
+
 
         /* OTT ratings - most dramatic */
         .edgic-ott { background: #32CD32; color: white; } /* Lime green - neutral OTT */
@@ -558,10 +643,12 @@
         .edgic-ottn { background: #FF0000; color: white; } /* Red - negative OTT */
         .edgic-ottm { background: #228B22; color: white; } /* Forest green - mixed OTT */
 
+
         /* Special cases */
         .edgic-inv { background: #333; color: #666; } /* Invisible */
         .edgic-dead { background: #666; color: #ccc; } /* Dead */
         .edgic-na { background: #444; color: #888; } /* Not available */
+
 
         .killer-reveal {
             background: linear-gradient(135deg, #8e24aa, #5e35b1);
@@ -572,11 +659,13 @@
             animation: pulse 2s ease-in-out infinite;
         }
 
+
         .killer-reveal h3 {
             color: white;
             font-size: 2rem;
             margin-bottom: 15px;
         }
+
 
         .motive-text {
             color: #e1bee7;
@@ -585,9 +674,11 @@
             margin: 15px 0;
         }
 
+
         .hidden {
             display: none;
         }
+
 
         .progress-bar {
             width: 100%;
@@ -598,6 +689,7 @@
             margin: 20px 0;
         }
 
+
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #ff4444, #ff8888, #ffaa44);
@@ -605,6 +697,7 @@
             animation: shimmer 3s ease-in-out infinite;
             transition: width 0.5s ease;
         }
+
 
         /* Relationship System Styles */
         .relationship-highlight {
@@ -614,6 +707,7 @@
             margin-top: 15px;
             border: 2px solid #4CAF50;
         }
+
 
         .relationship-pair {
             background: #333;
@@ -626,6 +720,7 @@
             margin-bottom: 15px;
         }
 
+
         .relationship-selector {
             background: #2a2a2a;
             color: #fff;
@@ -634,6 +729,7 @@
             border-radius: 4px;
             min-width: 150px;
         }
+
 
         @media (max-width: 768px) {
             .cast-grid {
@@ -651,169 +747,159 @@
     </style>
 </head>
 <body>
-    <!-- Audio Controls -->
-    <div class="audio-controls" id="audio-widget">
-        <div class="audio-header" id="audio-drag-handle">
-            <div class="audio-title">
-                <span class="drag-indicator">⋮⋮</span>
+<!-- Audio Controls -->
+<div class="audio-controls" id="audio-widget">
+<div class="audio-header" id="audio-drag-handle">
+<div class="audio-title">
+<span class="drag-indicator">⋮⋮</span>
                 🔊 Audio Controls
             </div>
-            <button class="minimize-btn" id="minimize-audio" onclick="toggleAudioWidget()">−</button>
-        </div>
-        <div class="audio-content" id="audio-content">
-            <button id="toggle-ambient" onclick="toggleAmbient()">🌙 Ambient</button>
-            <button id="toggle-sfx" onclick="toggleSFX()">🔪 SFX</button>
-            <button id="toggle-music" onclick="toggleMusic()">🎵 Music</button>
-            <br>
-            <label style="color: #fff; font-size: 11px;">Volume:</label>
-            <input type="range" id="master-volume" class="volume-slider" min="0" max="100" value="30" onchange="setMasterVolume(this.value)">
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="header">
-            <h1>💀 SLASHER MOVIE SIMULATOR 💀</h1>
-            <div class="subtitle">Inspired by the Slasher genre</div>
-            <div class="tagline">The killer is among us...</div>
-            <div style="background: rgba(76, 175, 80, 0.2); padding: 10px; border-radius: 8px; margin-top: 15px; border: 2px solid #4CAF50;">
-                <span style="color: #4CAF50; font-weight: bold; font-size: 1.1rem;">🔗 NOW WITH RELATIONSHIP SYSTEM!</span>
-                <div style="color: #ccc; font-size: 0.9rem; margin-top: 5px;">Define romantic couples, best friends, enemies & family bonds that affect survival!</div>
-            </div>
-        </div>
-
-        <div id="setup-screen">
-            <div class="section">
-                <h2>Movie Setup</h2>
-                <div class="form-group">
-                    <label for="movie-title">Movie Title</label>
-                    <input type="text" id="movie-title" placeholder="Enter your horror movie title...">
-                </div>
-                <div class="form-group">
-                    <label for="movie-year">Release Year</label>
-                    <input type="number" id="movie-year" min="1970" max="2030" value="2025" placeholder="2025">
-                </div>
-                <div class="form-group">
-                    <label for="game-mode">Game Mode</label>
-                    <select id="game-mode">
-                        <option value="spectator">Spectator (Killer hidden)</option>
-                        <option value="killer">Play as Killer</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="cast-size">Cast Size</label>
-                    <select id="cast-size">
-                        <option value="6">6 characters</option>
-                        <option value="8" selected>8 characters</option>
-                        <option value="10">10 characters</option>
-                        <option value="12">12 characters</option>
-                        <option value="15">15 characters</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="killer-count">Number of Killers</label>
-                    <select id="killer-count">
-                        <option value="random">Random (1-3)</option>
-                        <option value="1">1 Killer</option>
-                        <option value="2">2 Killers</option>
-                        <option value="3">3 Killers</option>
-                    </select>
-                </div>
-                <button class="btn" onclick="setupCast()" id="create-cast-btn">Create Cast</button>
-                <button class="btn btn-secondary" onclick="alert('Test button works!')" style="margin-left: 10px;">Test Button</button>
-                <button class="btn" onclick="testRelationshipSystem()" style="margin-left: 10px; background: #4CAF50;">🔗 Test Relationships</button>
-            </div>
-
-            <div id="cast-customization" class="section hidden">
-                <h2>Cast Customization</h2>
-                <div style="background: rgba(76, 175, 80, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #4CAF50;">
-                    <h3 style="color: #4CAF50; margin-bottom: 10px;">🔗 NEW: Relationship System Available!</h3>
-                    <p style="color: #ccc; margin: 0;">After customizing your characters, you can define relationships between them (romantic couples, best friends, enemies, etc.) that will affect the story, survival chances, and dialogue!</p>
-                </div>
-                <div id="cast-container" class="cast-grid"></div>
-            </div>
-        </div>
-
-        <div id="movie-screen" class="hidden">
-            <div class="section">
-                <h2 id="current-movie-title"></h2>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="movie-progress"></div>
-                </div>
-                <div id="current-act-display"></div>
-            </div>
-
-            <div class="section">
-                <div id="movie-log" class="movie-log"></div>
-                <div style="text-align: center; margin: 20px 0;">
-                    <button class="btn" id="continue-btn" onclick="continueStory()" style="display: none;">Continue Story</button>
-                    <button class="btn" id="autoplay-btn" onclick="toggleAutoplay()">Enable Autoplay</button>
-                    <button class="btn btn-secondary" id="skip-btn" onclick="skipToEnd()" style="display: none;">Skip to End</button>
-                    <button class="btn" id="view-results-btn" onclick="viewResults()" style="display: none;">View Final Results</button>
-                </div>
-                <div id="story-status" style="text-align: center; color: #ccc; margin: 10px 0;"></div>
-            </div>
-
-            <div id="killer-controls" class="section hidden">
-                <h2>Killer Actions</h2>
-                <div id="killer-targets"></div>
-                <div style="text-align: center; margin-top: 15px;">
-                    <button class="btn" id="force-killer-action" onclick="forceKillerAction()" style="display: none; background: #8B0000; font-size: 18px; padding: 20px 30px;">
+<button class="minimize-btn" id="minimize-audio" onclick="toggleAudioWidget()">−</button>
+</div>
+<div class="audio-content" id="audio-content">
+<button id="toggle-ambient" onclick="toggleAmbient()">🌙 Ambient</button>
+<button id="toggle-sfx" onclick="toggleSFX()">🔪 SFX</button>
+<button id="toggle-music" onclick="toggleMusic()">🎵 Music</button>
+<br/>
+<label style="color: #fff; font-size: 11px;">Volume:</label>
+<input class="volume-slider" id="master-volume" max="100" min="0" onchange="setMasterVolume(this.value)" type="range" value="30"/>
+</div>
+</div>
+<div class="container">
+<div class="header">
+<h1>💀 SLASHER MOVIE SIMULATOR 💀</h1>
+<div class="subtitle">Inspired by the Slasher genre</div>
+<div class="tagline">The killer is among us...</div>
+<div style="background: rgba(76, 175, 80, 0.2); padding: 10px; border-radius: 8px; margin-top: 15px; border: 2px solid #4CAF50;">
+<span style="color: #4CAF50; font-weight: bold; font-size: 1.1rem;">🔗 NOW WITH RELATIONSHIP SYSTEM!</span>
+<div style="color: #ccc; font-size: 0.9rem; margin-top: 5px;">Define romantic couples, best friends, enemies &amp; family bonds that affect survival!</div>
+</div>
+</div>
+<div id="setup-screen">
+<div class="section">
+<h2>Movie Setup</h2>
+<div class="form-group">
+<label for="movie-title">Movie Title</label>
+<input id="movie-title" placeholder="Enter your horror movie title..." type="text"/>
+</div>
+<div class="form-group">
+<label for="movie-year">Release Year</label>
+<input id="movie-year" max="2030" min="1970" placeholder="2025" type="number" value="2025"/>
+</div>
+<div class="form-group">
+<label for="game-mode">Game Mode</label>
+<select id="game-mode">
+<option value="spectator">Spectator (Killer hidden)</option>
+<option value="killer">Play as Killer</option>
+</select>
+</div>
+<div class="form-group">
+<label for="cast-size">Cast Size</label>
+<select id="cast-size">
+<option value="6">6 characters</option>
+<option selected="" value="8">8 characters</option>
+<option value="10">10 characters</option>
+<option value="12">12 characters</option>
+<option value="15">15 characters</option>
+</select>
+</div>
+<div class="form-group">
+<label for="killer-count">Number of Killers</label>
+<select id="killer-count">
+<option value="random">Random (1-3)</option>
+<option value="1">1 Killer</option>
+<option value="2">2 Killers</option>
+<option value="3">3 Killers</option>
+</select>
+</div>
+<button class="btn" id="create-cast-btn" onclick="setupCast()">Create Cast</button>
+<button class="btn btn-secondary" onclick="alert('Test button works!')" style="margin-left: 10px;">Test Button</button>
+<button class="btn" onclick="testRelationshipSystem()" style="margin-left: 10px; background: #4CAF50;">🔗 Test Relationships</button>
+</div>
+<div class="section hidden" id="cast-customization">
+<h2>Cast Customization</h2>
+<div style="background: rgba(76, 175, 80, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #4CAF50;">
+<h3 style="color: #4CAF50; margin-bottom: 10px;">🔗 NEW: Relationship System Available!</h3>
+<p style="color: #ccc; margin: 0;">After customizing your characters, you can define relationships between them (romantic couples, best friends, enemies, etc.) that will affect the story, survival chances, and dialogue!</p>
+</div>
+<div class="cast-grid" id="cast-container"></div>
+</div>
+</div>
+<div class="hidden" id="movie-screen">
+<div class="section">
+<h2 id="current-movie-title"></h2>
+<div class="progress-bar">
+<div class="progress-fill" id="movie-progress"></div>
+</div>
+<div id="current-act-display"></div>
+<!-- Cast Grid Status -->
+<div id="cast-grid-status" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+</div>
+<div class="section">
+<div class="movie-log" id="movie-log"></div>
+<div style="text-align: center; margin: 20px 0;">
+<button class="btn" id="continue-btn" onclick="continueStory()" style="display: none;">Continue Story</button>
+<button class="btn" id="autoplay-btn" onclick="toggleAutoplay()">Enable Autoplay</button>
+<button class="btn btn-secondary" id="skip-btn" onclick="skipToEnd()" style="display: none;">Skip to End</button>
+<button class="btn" id="view-results-btn" onclick="viewResults()" style="display: none;">View Final Results</button>
+</div>
+<div id="story-status" style="text-align: center; color: #ccc; margin: 10px 0;"></div>
+</div>
+<div class="section hidden" id="killer-controls">
+<h2>Killer Actions</h2>
+<div id="killer-targets"></div>
+<div style="text-align: center; margin-top: 15px;">
+<button class="btn" id="force-killer-action" onclick="forceKillerAction()" style="display: none; background: #8B0000; font-size: 18px; padding: 20px 30px;">
                         🔪 TAKE KILLER ACTION NOW 🔪
                     </button>
-                    <p id="killer-help-text" style="color: #ff6666; margin-top: 10px; display: none;">
+<p id="killer-help-text" style="color: #ff6666; margin-top: 10px; display: none;">
                         Click "Continue Story" to get killer opportunities, or use the button above to force an action anytime!
                     </p>
-                </div>
-            </div>
-        </div>
-
-        <div id="results-screen" class="hidden">
-            <div class="section">
-                <h2 id="final-title"></h2>
-                
-                <div id="killer-reveal-section"></div>
-
-                <div class="final-table-container">
-                    <h3>Final Body Count</h3>
-                    <table class="final-table" id="final-body-count">
-                        <thead>
-                            <tr>
-                                <th>Character</th>
-                                <th>Archetype</th>
-                                <th>Act 1</th>
-                                <th>Act 2</th>
-                                <th>Act 3</th>
-                                <th>Final Status</th>
-                                <th>Killed By</th>
-                            </tr>
-                        </thead>
-                        <tbody id="final-body-tbody"></tbody>
-                    </table>
-                </div>
-
-                <div class="edgic-table">
-                    <h3>Horror Movie Edgic Analysis</h3>
-                    <table class="final-table" id="edgic-analysis">
-                        <thead>
-                            <tr>
-                                <th>Character</th>
-                                <th>Archetype</th>
-                                <th>Act 1</th>
-                                <th>Act 2</th>
-                                <th>Act 3</th>
-                            </tr>
-                        </thead>
-                        <tbody id="edgic-tbody"></tbody>
-                    </table>
-                </div>
-
-                <button class="btn" onclick="createSequel()">Create Sequel</button>
-                <button class="btn btn-secondary" onclick="resetSimulator()">Create New Horror</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
+</div>
+</div>
+</div>
+<div class="hidden" id="results-screen">
+<div class="section">
+<h2 id="final-title"></h2>
+<div id="killer-reveal-section"></div>
+<div class="final-table-container">
+<h3>Final Body Count</h3>
+<table class="final-table" id="final-body-count">
+<thead>
+<tr>
+<th>Character</th>
+<th>Archetype</th>
+<th>Act 1</th>
+<th>Act 2</th>
+<th>Act 3</th>
+<th>Final Status</th>
+<th>Killed By</th>
+</tr>
+</thead>
+<tbody id="final-body-tbody"></tbody>
+</table>
+</div>
+<div class="edgic-table">
+<h3>Horror Movie Edgic Analysis</h3>
+<table class="final-table" id="edgic-analysis">
+<thead>
+<tr>
+<th>Character</th>
+<th>Archetype</th>
+<th>Act 1</th>
+<th>Act 2</th>
+<th>Act 3</th>
+</tr>
+</thead>
+<tbody id="edgic-tbody"></tbody>
+</table>
+</div>
+<button class="btn" onclick="createSequel()">Create Sequel</button>
+<button class="btn btn-secondary" onclick="resetSimulator()">Create New Horror</button>
+</div>
+</div>
+</div>
+<script>
         // Character archetypes and names
         const archetypes = [
             { name: 'The Final Girl', description: 'Pure-hearted and resourceful, destined to survive', stats: { survival: 9, intelligence: 8, social: 6, athletics: 7, stealth: 6, luck: 8 } },
@@ -837,6 +923,7 @@
             { name: 'The Reporter', description: 'Investigative journalist seeking the truth', stats: { survival: 6, intelligence: 8, social: 8, athletics: 5, stealth: 6, luck: 5 } },
             { name: 'The Horror Fanatic', description: 'Knows all the rules but may be overconfident', stats: { survival: 7, intelligence: 7, social: 6, athletics: 5, stealth: 6, luck: 4 } }
         ];
+
 
         const names = [
          'Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Ethan', 'Sophia', 'Mason', 'Isabella', 'William',
@@ -879,6 +966,7 @@
   'Cash', 'Nylah', 'Kellan', 'Elliott', 'Moses', 'Winter', 'Reed', 'Celeste', 'Finley', 'Lara', 'Figgy', 'Feng', 'Forrest'
         ];
 
+
         // Game state
         let gameState = {
             characters: [],
@@ -897,11 +985,13 @@
             relationships: new Map() // Track all character relationships
         };
 
+
         // Franchise history tracking
         let franchiseHistory = {
             movies: [],
             allCharacters: new Map() // Map character names to their info across movies
         };
+
 
         // Relationship System
         const relationshipTypes = {
@@ -912,6 +1002,7 @@
             EX_LOVERS: { name: 'Ex-Lovers', emoji: '💔', survivalBonus: -1, loyaltyBonus: -1 },
             NEUTRAL: { name: 'Neutral', emoji: '🤝', survivalBonus: 0, loyaltyBonus: 0 }
         };
+
 
         // Relationship helper functions
         function createRelationship(char1, char2, type) {
@@ -924,10 +1015,12 @@
             });
         }
 
+
         function getRelationship(char1, char2) {
             const key = `${Math.min(char1.id, char2.id)}-${Math.max(char1.id, char2.id)}`;
             return gameState.relationships.get(key);
         }
+
 
         function getCharacterRelationships(character) {
             const relationships = [];
@@ -943,6 +1036,7 @@
             return relationships;
         }
 
+
         function findCharactersByRelationType(type) {
             const pairs = [];
             gameState.relationships.forEach((rel, key) => {
@@ -957,12 +1051,14 @@
             return pairs;
         }
 
+
         function testRelationshipSystem() {
             alert('🔗 Relationship System Test!\n\nTo see the full relationship system:\n\n1. Click "Create Cast" button\n2. Customize your characters\n3. Look for "Setup Relationships & Start Movie" button\n4. Click it to see the relationship setup screen!\n\nThe relationship system adds:\n💕 Romantic couples\n👥 Best friends\n👪 Family bonds\n⚔️ Enemies\n💔 Ex-lovers\n\nThese affect survival chances, dialogue, and story events!');
             
             // Quick demo of relationship types
             console.log('Available relationship types:', relationshipTypes);
         }
+
 
         // Audio System
         let audioContext;
@@ -973,6 +1069,7 @@
             masterVolume: 0.3
         };
 
+
         // Audio Widget Drag and Minimize System
         let audioWidgetState = {
             isMinimized: false,
@@ -980,6 +1077,7 @@
             dragOffset: { x: 0, y: 0 },
             position: { x: 20, y: 20 } // Default position from right and top
         };
+
 
         function initAudioWidget() {
             const widget = document.getElementById('audio-widget');
@@ -1004,6 +1102,7 @@
             document.addEventListener('touchend', stopDrag);
         }
 
+
         function startDrag(e) {
             audioWidgetState.isDragging = true;
             const widget = document.getElementById('audio-widget');
@@ -1015,6 +1114,7 @@
             widget.classList.add('dragging');
             e.preventDefault();
         }
+
 
         function startDragTouch(e) {
             const touch = e.touches[0];
@@ -1029,6 +1129,7 @@
             e.preventDefault();
         }
 
+
         function drag(e) {
             if (!audioWidgetState.isDragging) return;
             
@@ -1039,6 +1140,7 @@
             updateWidgetPosition(widget, x, y);
             e.preventDefault();
         }
+
 
         function dragTouch(e) {
             if (!audioWidgetState.isDragging) return;
@@ -1051,6 +1153,7 @@
             updateWidgetPosition(widget, x, y);
             e.preventDefault();
         }
+
 
         function updateWidgetPosition(widget, x, y) {
             const windowWidth = window.innerWidth;
@@ -1076,6 +1179,7 @@
             audioWidgetState.position.y = clampedY;
         }
 
+
         function stopDrag() {
             if (!audioWidgetState.isDragging) return;
             
@@ -1083,6 +1187,7 @@
             const widget = document.getElementById('audio-widget');
             widget.classList.remove('dragging');
         }
+
 
         function toggleAudioWidget() {
             const widget = document.getElementById('audio-widget');
@@ -1114,6 +1219,7 @@
             }
         }
 
+
         // Handle window resize to keep widget in bounds
         window.addEventListener('resize', () => {
             if (audioWidgetState.isDragging) return;
@@ -1140,6 +1246,7 @@
             }
         });
 
+
         // Simple audio functions for compatibility
         function initAudioSystem() {
             try {
@@ -1150,6 +1257,7 @@
                 audioContext = null;
             }
         }
+
 
         function createBeep(frequency, duration) {
             if (!audioContext || !audioSettings.sfx) return;
@@ -1174,11 +1282,13 @@
             }
         }
 
+
         function toggleAmbient() {
             audioSettings.ambient = !audioSettings.ambient;
             const btn = document.getElementById('toggle-ambient');
             btn.classList.toggle('muted', !audioSettings.ambient);
         }
+
 
         function toggleSFX() {
             audioSettings.sfx = !audioSettings.sfx;
@@ -1186,15 +1296,18 @@
             btn.classList.toggle('muted', !audioSettings.sfx);
         }
 
+
         function toggleMusic() {
             audioSettings.music = !audioSettings.music;
             const btn = document.getElementById('toggle-music');
             btn.classList.toggle('muted', !audioSettings.music);
         }
 
+
         function setMasterVolume(value) {
             audioSettings.masterVolume = value / 100;
         }
+
 
         // Enhanced visual effects
         function addVisualEffect(element, effectClass, duration = 500) {
@@ -1202,6 +1315,7 @@
             element.classList.add(effectClass);
             setTimeout(() => element.classList.remove(effectClass), duration);
         }
+
 
         function createBloodParticles(element, count = 3) {
             if (!element) return;
@@ -1216,6 +1330,7 @@
             }
         }
 
+
         function flashScreen(color = 'rgba(255, 0, 0, 0.3)', duration = 200) {
             const flash = document.createElement('div');
             flash.style.cssText = `
@@ -1226,6 +1341,7 @@
             document.body.appendChild(flash);
             setTimeout(() => flash.remove(), duration);
         }
+
 
         // Enhanced event system
         function addEvent(type, text) {
@@ -1262,6 +1378,7 @@
             }, 100);
         }
 
+
         function updateMovieLog() {
             const log = document.getElementById('movie-log');
             const latestEvent = gameState.events[gameState.events.length - 1];
@@ -1272,7 +1389,9 @@
             
             log.appendChild(eventDiv);
             log.scrollTop = log.scrollHeight;
+            updateCastGridStatus();
         }
+
 
         // Setup functions
         function setupCast() {
@@ -1364,10 +1483,12 @@
             }
         }
 
+
         function calculateSurvivalChance(stats) {
             const total = stats.survival * 2 + stats.intelligence + stats.athletics + stats.stealth + stats.luck;
             return Math.min(90, Math.max(5, total * 1.2));
         }
+
 
         function displayCastCustomization() {
             const container = document.getElementById('cast-container');
@@ -1438,30 +1559,37 @@
             document.getElementById('cast-customization').classList.remove('hidden');
         }
 
+
         function showRelationshipSetup() {
             // Hide cast customization and show relationship setup
             document.getElementById('cast-customization').classList.add('hidden');
             
             // Create relationship setup screen
-            const setupScreen = document.createElement('div');
-            setupScreen.id = 'relationship-setup';
-            setupScreen.className = 'section';
-            setupScreen.innerHTML = `
-                <h2>Relationship Setup</h2>
-                <p style="color: #ccc; margin-bottom: 20px;">Define relationships between characters. These will affect survival chances, dialogue, and story events!</p>
-                
-                <div style="margin-bottom: 20px;">
-                    <button class="btn" onclick="generateRandomRelationships()">🎲 Generate Random Relationships</button>
-                    <button class="btn btn-secondary" onclick="clearAllRelationships()">🧹 Clear All</button>
-                </div>
-                
-                <div id="relationship-pairs" style="display: grid; gap: 15px; margin-bottom: 20px;"></div>
-                
-                <div style="text-align: center;">
-                    <button class="btn" onclick="finishRelationshipSetup()">Continue to Movie</button>
-                    <button class="btn btn-secondary" onclick="backToCastCustomization()">Back to Cast</button>
-                </div>
-            `;
+const setupScreen = document.createElement('div');
+setupScreen.id = 'relationship-setup';
+setupScreen.className = 'section';
+setupScreen.innerHTML = `
+    <h2>Relationship Setup</h2>
+    <p style="color: #ccc; margin-bottom: 20px;">Define relationships between characters. These will affect survival chances, dialogue, and story events!</p>
+    
+    <div style="margin-bottom: 20px;">
+        <button class="btn" onclick="generateRandomRelationships()">🎲 Generate Random Relationships</button>
+        <button class="btn btn-secondary" onclick="clearAllRelationships()">🧹 Clear All</button>
+    </div>
+    
+    <div id="relationship-pairs" style="display: grid; gap: 15px; margin-bottom: 20px;"></div>
+    
+    <div style="margin: 16px 0; padding: 10px 15px; background: #1a1a1a; border: 1px solid #555; border-radius: 8px; color: #fff; font-size: 15px;">
+        <strong>Relationship Legend:</strong><br/><br/>
+        💕 Romantic Partners &nbsp;&nbsp;&nbsp;&nbsp;  👪 Family Member &nbsp;&nbsp;&nbsp;&nbsp;  🤝 Friends/Acquaintances &nbsp;&nbsp;&nbsp;&nbsp; 😡 Enemies<br/>
+        🧊 Exes / Broken Up &nbsp;&nbsp;&nbsp;&nbsp; ⚔️ Mutual Hatred &nbsp;&nbsp;&nbsp;&nbsp; 🧍 No Relationship
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button class="btn" onclick="finishRelationshipSetup()">Continue to Movie</button>
+        <button class="btn btn-secondary" onclick="backToCastCustomization()">Back to Cast</button>
+    </div>
+`;
             
             // Insert after cast customization
             const castCustomization = document.getElementById('cast-customization');
@@ -1470,60 +1598,62 @@
             displayRelationshipPairs();
         }
 
-        function displayRelationshipPairs() {
-            const container = document.getElementById('relationship-pairs');
-            if (!container) return;
-            
-            container.innerHTML = '';
-            
-            // Generate all possible character pairs
-            const characters = gameState.characters;
-            for (let i = 0; i < characters.length; i++) {
-                for (let j = i + 1; j < characters.length; j++) {
-                    const char1 = characters[i];
-                    const char2 = characters[j];
-                    const existingRel = getRelationship(char1, char2);
-                    
-                    const pairDiv = document.createElement('div');
-                    pairDiv.className = 'relationship-pair';
-                    
-                    pairDiv.innerHTML = `
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <span style="color: #fff; font-weight: bold;">
-                                ${char1.name} & ${char2.name}
-                            </span>
-                            <small style="color: #ccc;">
-                                ${char1.archetype.name} & ${char2.archetype.name}
-                            </small>
-                        </div>
-                        <select class="relationship-selector" onchange="setRelationship(${char1.id}, ${char2.id}, this.value)">
-                            <option value="NEUTRAL" ${(!existingRel || existingRel.type === relationshipTypes.NEUTRAL) ? 'selected' : ''}>
-                                🤝 Neutral
-                            </option>
-                            <option value="ROMANTIC" ${(existingRel && existingRel.type === relationshipTypes.ROMANTIC) ? 'selected' : ''}>
-                                💕 Romantic Couple
-                            </option>
-                            <option value="BEST_FRIENDS" ${(existingRel && existingRel.type === relationshipTypes.BEST_FRIENDS) ? 'selected' : ''}>
-                                👥 Best Friends
-                            </option>
-                            <option value="FAMILY" ${(existingRel && existingRel.type === relationshipTypes.FAMILY) ? 'selected' : ''}>
-                                👪 Family
-                            </option>
-                            <option value="ENEMIES" ${(existingRel && existingRel.type === relationshipTypes.ENEMIES) ? 'selected' : ''}>
-                                ⚔️ Enemies
-                            </option>
-                            <option value="EX_LOVERS" ${(existingRel && existingRel.type === relationshipTypes.EX_LOVERS) ? 'selected' : ''}>
-                                💔 Ex-Lovers
-                            </option>
-                        </select>
-                    `;
-                    
-                    container.appendChild(pairDiv);
-                }
-            }
-        }
 
-        function setRelationship(char1Id, char2Id, relationshipKey) {
+        
+function displayRelationshipPairs() {
+    const container = document.getElementById("relationship-pairs");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const characters = gameState.characters;
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+    table.style.textAlign = "center";
+    table.style.color = "#ccc";
+    table.style.fontSize = "14px";
+
+    // Header row
+    let headerRow = "<tr><th></th>";
+    characters.forEach(c => {
+        headerRow += "<th style='padding:6px;'>" + c.name + "<br><span style='color:#888; font-size:12px;'>" + c.archetype.name + "</span></th>";
+    });
+    headerRow += "</tr>";
+    table.innerHTML += headerRow;
+
+    characters.forEach((rowChar, i) => {
+        let rowHTML = "<tr><th style='text-align:left; padding:6px;'>" + rowChar.name + "<br><span style='color:#888; font-size:12px;'>" + rowChar.archetype.name + "</span></th>";
+        characters.forEach((colChar, j) => {
+            if (i === j) {
+                rowHTML += "<td style='opacity:0.2;'>—</td>";
+            } else {
+                const rel = getRelationship(rowChar, colChar);
+                const emoji = rel ? rel.type.emoji : "🤝";
+                rowHTML += "<td style='cursor:pointer;' onclick='cycleRelationship(" + rowChar.id + "," + colChar.id + ", this)'>" + emoji + "</td>";
+            }
+        });
+        rowHTML += "</tr>";
+        table.innerHTML += rowHTML;
+    });
+
+    container.appendChild(table);
+}
+
+function cycleRelationship(char1Id, char2Id, cell) {
+    const char1 = gameState.characters.find(c => c.id === char1Id);
+    const char2 = gameState.characters.find(c => c.id === char2Id);
+    const types = Object.keys(relationshipTypes);
+    const current = getRelationship(char1, char2);
+    let nextIndex = 0;
+    if (current) {
+        const curKey = types.find(key => relationshipTypes[key] === current.type);
+        nextIndex = (types.indexOf(curKey) + 1) % types.length;
+    }
+    const nextType = relationshipTypes[types[nextIndex]];
+    createRelationship(char1, char2, nextType);
+    cell.innerHTML = nextType.emoji;
+}
+function setRelationship(char1Id, char2Id, relationshipKey) {
             const char1 = gameState.characters.find(c => c.id === char1Id);
             const char2 = gameState.characters.find(c => c.id === char2Id);
             const relType = relationshipTypes[relationshipKey];
@@ -1532,6 +1662,7 @@
                 createRelationship(char1, char2, relType);
             }
         }
+
 
         function generateRandomRelationships() {
             // Clear existing relationships
@@ -1572,10 +1703,12 @@
             displayRelationshipPairs();
         }
 
+
         function clearAllRelationships() {
             gameState.relationships.clear();
             displayRelationshipPairs();
         }
+
 
         function finishRelationshipSetup() {
             // Remove relationship setup screen
@@ -1588,6 +1721,7 @@
             startMovie();
         }
 
+
         function backToCastCustomization() {
             // Remove relationship setup screen and show cast customization
             const setupScreen = document.getElementById('relationship-setup');
@@ -1597,9 +1731,11 @@
             document.getElementById('cast-customization').classList.remove('hidden');
         }
 
+
         function updateCharacterName(index, name) {
             gameState.characters[index].name = name;
         }
+
 
         function updateCharacterArchetype(index, archetypeName) {
             const archetype = archetypes.find(a => a.name === archetypeName);
@@ -1609,11 +1745,13 @@
             displayCastCustomization();
         }
 
+
         function updateCharacterStat(index, stat, value) {
             gameState.characters[index].stats[stat] = parseInt(value);
             gameState.characters[index].survivalChance = calculateSurvivalChance(gameState.characters[index].stats);
             displayCastCustomization();
         }
+
 
         function randomizeCast() {
             gameState.characters.forEach(character => {
@@ -1624,6 +1762,7 @@
             });
             displayCastCustomization();
         }
+
 
         function startMovie() {
             document.getElementById('setup-screen').classList.add('hidden');
@@ -1650,6 +1789,7 @@
             startAct1();
         }
 
+
         function displayKillerSelection() {
             const container = document.getElementById('killer-targets');
             container.innerHTML = '<h3>Choose your killer character from the entire cast:</h3><p style="color: #ff6666; margin-bottom: 15px;">Any character can be the killer - choose wisely!</p>';
@@ -1669,6 +1809,7 @@
                 container.appendChild(btn);
             });
         }
+
 
         function selectKillerPlayer(killer) {
             gameState.killerPlayer = killer;
@@ -1719,6 +1860,7 @@
             
             document.getElementById('killer-targets').innerHTML = killerInfo;
         }
+
 
         function showKillerActions() {
             if (!gameState.isKillerMode || !gameState.killerPlayer) return;
@@ -1784,6 +1926,7 @@
                 </div>
             `;
         }
+
 
         function attemptKill(victimId) {
             const victim = gameState.characters.find(c => c.id === victimId);
@@ -1939,6 +2082,7 @@
             }, 2000);
         }
 
+
         function addRelationshipReactions(victim, eventType) {
             const victimRelationships = getCharacterRelationships(victim);
             const aliveRelationships = victimRelationships.filter(rel => 
@@ -1976,13 +2120,16 @@
             });
         }
 
+
         function showKillTargets() {
             document.getElementById('killer-target-selection').style.display = 'block';
         }
 
+
         function cancelKillAction() {
             document.getElementById('killer-target-selection').style.display = 'none';
         }
+
 
         function performPsychOut() {
             const aliveVictims = gameState.characters.filter(c => 
@@ -2045,6 +2192,7 @@
             }, 1500);
         }
 
+
         function plantEvidence() {
             const aliveInnocents = gameState.characters.filter(c => 
                 c.status === 'Alive' && c.id !== gameState.killerPlayer.id
@@ -2096,6 +2244,7 @@
             }, 1500);
         }
 
+
         function hideAndWait() {
             addEvent('killer-thought', `You retreat to the shadows, biding your time for the perfect moment to strike...`);
             addEvent('event', `The killer seems to have vanished. An eerie calm settles over the house.`);
@@ -2131,6 +2280,7 @@
             }, 1500);
         }
 
+
         function forceKillerAction() {
             if (!gameState.isKillerMode || !gameState.killerPlayer) return;
             
@@ -2142,11 +2292,13 @@
             document.getElementById('killer-help-text').style.display = 'none';
         }
 
+
         function updateProgress() {
             const progress = ((gameState.currentAct - 1) / 3) * 100;
             document.getElementById('movie-progress').style.width = progress + '%';
             document.getElementById('current-act-display').textContent = `Act ${gameState.currentAct}`;
         }
+
 
         function startAct1() {
             gameState.storyQueue = [];
@@ -2306,6 +2458,7 @@
             }
         }
 
+
         function performOpeningKill() {
             const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
             if (aliveCharacters.length === 0) return;
@@ -2352,6 +2505,7 @@
             killCharacter(victim, killer, 1);
         }
 
+
         function killCharacter(victim, killer, act) {
             victim.status = 'Dead';
             victim.actStatuses[act] = 'Killed';
@@ -2362,12 +2516,14 @@
             victim.edgic[act] = 'CP5';
         }
 
+
         function attackCharacter(victim, act) {
             if (victim.status === 'Alive') {
                 victim.actStatuses[act] = 'Attacked';
                 victim.edgic[act] = 'CP4';
             }
         }
+
 
         function performRandomKill() {
             const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
@@ -2401,6 +2557,7 @@
                 addRelationshipReactions(victim, 'death');
             }, 1000);
         }
+
 
         function selectRelationshipBasedVictim(aliveCharacters) {
             // Strategy 1: Target isolated characters (those with fewer strong relationships)
@@ -2447,6 +2604,7 @@
             
             return null; // No strategic target found, use random
         }
+
 
         function getRelationshipAwareKillScenario(victim, killer) {
             const victimRelationships = getCharacterRelationships(victim);
@@ -2495,6 +2653,7 @@
             
             return killScenarios[Math.floor(Math.random() * killScenarios.length)];
         }
+
 
         function getRelationshipAwareFinalWords(victim, killer) {
             const victimRelationships = getCharacterRelationships(victim);
@@ -2552,6 +2711,7 @@
             return finalWords[Math.floor(Math.random() * finalWords.length)];
         }
 
+
         function addGroupEvent() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
             if (aliveChars.length < 2) return;
@@ -2592,6 +2752,7 @@
             addEvent('event', events[Math.floor(Math.random() * events.length)]);
         }
 
+
         function addRedHerring() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
             if (aliveChars.length === 0) return;
@@ -2618,6 +2779,7 @@
             
             addEvent('red-herring', herrings[Math.floor(Math.random() * herrings.length)]);
         }
+
 
         function addCharacterMoment() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
@@ -2677,6 +2839,7 @@
                 addEvent('dialogue', line);
             });
         }
+
 
         function getRelationshipSpecificMoments(char1, char2, relationshipType) {
             const deadFriend = gameState.characters.find(c => c.status === 'Dead');
@@ -2775,6 +2938,7 @@
             ];
         }
 
+
         function addTensionMoment() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
             if (aliveChars.length === 0) return;
@@ -2810,6 +2974,7 @@
             addEvent('event', tensionMoments[Math.floor(Math.random() * tensionMoments.length)]);
             addEvent('dialogue', tensionDialogue[Math.floor(Math.random() * tensionDialogue.length)]);
         }
+
 
         function addCharacterInteraction() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
@@ -2861,6 +3026,7 @@
                 addEvent('dialogue', line);
             });
         }
+
 
         function addRelationshipDrama() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
@@ -2925,6 +3091,7 @@
             });
         }
 
+
         function addJumpScare() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
             if (aliveChars.length === 0) return;
@@ -2956,6 +3123,7 @@
             addEvent('dialogue', scareDialogue[Math.floor(Math.random() * scareDialogue.length)]);
         }
 
+
         function addQuietMoment() {
             const aliveChars = gameState.characters.filter(c => c.status === 'Alive');
             if (aliveChars.length === 0) return;
@@ -2986,6 +3154,7 @@
             addEvent('narrative', moments[Math.floor(Math.random() * moments.length)]);
             addEvent('dialogue', quietDialogue[Math.floor(Math.random() * quietDialogue.length)]);
         }
+
 
         function addSequelReferences() {
             const returningChars = gameState.characters.filter(c => c.isReturning && c.status === 'Alive');
@@ -3025,6 +3194,7 @@
             });
         }
 
+
         function addDiscoveryEvent() {
             const discoveries = [
                 'The group finds evidence that the killer has been watching them for weeks.',
@@ -3049,6 +3219,7 @@
             
             addEvent('event', discoveries[Math.floor(Math.random() * discoveries.length)]);
         }
+
 
         function performRandomAttack() {
             const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive');
@@ -3106,6 +3277,7 @@
             attackCharacter(victim, gameState.currentAct);
         }
 
+
         function endAct1() {
             addEvent('title', '🎭 END OF ACT 1 🎭');
             gameState.currentAct = 2;
@@ -3120,6 +3292,7 @@
             
             updateStoryStatus();
         }
+
 
         function startAct2() {
             // Clear the story queue and start fresh for Act 2
@@ -3271,6 +3444,7 @@
             }
         }
 
+
         function addMajorReveal() {
             const reveals = [
                 'The killer\'s true identity is starting to become clear...',
@@ -3281,6 +3455,7 @@
             
             addEvent('reveal', reveals[Math.floor(Math.random() * reveals.length)]);
         }
+
 
         function endAct2() {
             addEvent('title', '🎭 END OF ACT 2 🎭');
@@ -3299,6 +3474,7 @@
             
             updateStoryStatus();
         }
+
 
         function startAct3() {
             // Clear the story queue and start fresh for Act 3
@@ -3349,6 +3525,7 @@
             }
         }
 
+
         function revealKiller() {
             // Killer reveal
             const killerNames = gameState.killers.map(k => k.name).join(' and ');
@@ -3362,6 +3539,7 @@
             const speech = generateKillerSpeech();
             addEvent('dialogue', `"${speech}" - ${gameState.killers[0].name}`);
         }
+
 
         function generateKillerMotive() {
             const victims = gameState.characters.filter(c => c.status === 'Dead' && !gameState.killers.includes(c));
@@ -3379,6 +3557,7 @@
             
             return motives[Math.floor(Math.random() * motives.length)];
         }
+
 
         function generateKillerSpeech() {
             const speeches = [
@@ -3406,6 +3585,7 @@
             
             return speeches[Math.floor(Math.random() * speeches.length)];
         }
+
 
         function finalConfrontation() {
             const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
@@ -3521,6 +3701,7 @@
             defeatKiller(finalGirl);
         }
 
+
         function defeatKiller(survivor) {
             const methods = [
                 'stabs the killer with their own weapon',
@@ -3548,6 +3729,7 @@
             // Generate final edgic ratings
             generateEdgicRatings(3);
         }
+
 
         function generateEdgicRatings(act) {
             gameState.characters.forEach(character => {
@@ -3659,6 +3841,7 @@
             });
         }
 
+
         // NEW STORY CONTROL FUNCTIONS
         function updateMovieControls() {
             const continueBtn = document.getElementById('continue-btn');
@@ -3684,6 +3867,7 @@
             }
         }
 
+
         function updateStoryStatus() {
             const statusDiv = document.getElementById('story-status');
             
@@ -3701,6 +3885,7 @@
                 statusDiv.style.color = '#ccc';
             }
         }
+
 
         function continueStory() {
             createBeep(600, 0.05);
@@ -3728,6 +3913,7 @@
                 }
             }
         }
+
 
         function playNextStoryEvent() {
             if (gameState.currentStoryIndex >= gameState.storyQueue.length) {
@@ -3786,6 +3972,7 @@
             }
         }
 
+
         function toggleAutoplay() {
             gameState.autoPlay = !gameState.autoPlay;
             createBeep(600, 0.05);
@@ -3796,6 +3983,7 @@
                 playNextStoryEvent();
             }
         }
+
 
         function skipToEnd() {
             createBeep(400, 0.1);
@@ -3827,6 +4015,7 @@
             updateStoryStatus();
         }
 
+
         function skipAct2() {
             gameState.currentAct = 2;
             updateProgress();
@@ -3843,6 +4032,7 @@
             endAct2();
         }
 
+
         function skipAct3() {
             gameState.currentAct = 3;
             updateProgress();
@@ -3853,10 +4043,12 @@
             gameState.movieComplete = true;
         }
 
+
         function viewResults() {
             createBeep(600, 0.1);
             showResults();
         }
+
 
         function recordMovieInFranchise() {
             // Create movie record
@@ -3902,6 +4094,7 @@
             // Add movie to franchise history
             franchiseHistory.movies.push(movieRecord);
         }
+
 
         function displayFranchiseHistory() {
             if (franchiseHistory.movies.length === 0) return;
@@ -3994,6 +4187,7 @@
             });
         }
 
+
         function displayKillerReveal() {
             const container = document.getElementById('killer-reveal-section');
             const killerNames = gameState.killers.map(k => `${k.name} (${k.archetype.name})`).join(', ');
@@ -4006,6 +4200,7 @@
                 </div>
             `;
         }
+
 
         function displayFinalBodyCount() {
             const tbody = document.getElementById('final-body-tbody');
@@ -4040,6 +4235,7 @@
             });
         }
 
+
         function showResults() {
             // Remove any existing franchise history table first
             const existingFranchiseTable = document.querySelector('.franchise-history');
@@ -4060,6 +4256,7 @@
             displayEdgicAnalysis();
             displayFranchiseHistory();
         }
+
 
         function displayEdgicAnalysis() {
             const tbody = document.getElementById('edgic-tbody');
@@ -4090,6 +4287,7 @@
             // Add edgic legend after the table
             addEdgicLegend();
         }
+
 
         function addEdgicLegend() {
             // Check if legend already exists
@@ -4138,6 +4336,7 @@
             edgicTable.appendChild(legendDiv);
         }
 
+
         function getEdgicClass(rating) {
             if (rating === 'N/A') return 'edgic-na';
             if (rating === 'DEAD') return 'edgic-dead';
@@ -4181,6 +4380,7 @@
             // Fallback
             return 'edgic-inv';
         }
+
 
         function createSequel() {
             const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
@@ -4514,6 +4714,7 @@
             return sequelFormats[Math.floor(Math.random() * sequelFormats.length)];
         }
 
+
         function resetSimulator() {
             createBeep(400, 0.1);
             gameState = {
@@ -4567,6 +4768,7 @@
             }
         }
 
+
         // Enhanced button effects
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('btn')) {
@@ -4574,6 +4776,7 @@
                 addVisualEffect(e.target, 'pulse-effect', 200);
             }
         });
+
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -4592,6 +4795,7 @@
             document.addEventListener('click', enableAudio);
             document.addEventListener('keydown', enableAudio);
         });
+
 
         // Make sure these functions are globally accessible
         window.toggleAudioWidget = toggleAudioWidget;
@@ -4628,6 +4832,55 @@
         window.confirmSurvivorSelection = confirmSurvivorSelection;
         window.cancelSurvivorSelection = cancelSurvivorSelection;
         window.resetSimulator = resetSimulator;
-    </script>
+    
+function updateStatusSidebar() {
+    const list = document.getElementById("status-list");
+    if (!list) return;
+    list.innerHTML = "";
+    gameState.characters.forEach(c => {
+        const li = document.createElement("li");
+        const icon = c.status === "Alive" ? "☘️" : "☠️";
+        li.innerHTML = icon + " <strong>" + c.name + "</strong> <span style='color:#888;'>(" + c.archetype.name + ")</span>";
+        li.style.marginBottom = "6px";
+        list.appendChild(li);
+    });
+    document.getElementById("").style.display = "block";
+}
+
+const originalAddEvent = addEvent;
+addEvent = function(type, text) {
+    originalAddEvent(type, text);
+    
+};
+
+
+function updateCastGridStatus() {
+    const container = document.getElementById("cast-grid-status");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    const characters = [...gameState.characters];
+
+    characters.sort((a, b) => {
+        if (a.status === "Alive" && b.status !== "Alive") return 1;
+        if (b.status === "Alive" && a.status !== "Alive") return -1;
+        if (a.deathAct && b.deathAct) return b.deathAct - a.deathAct;
+        return 0;
+    });
+
+    characters.forEach(c => {
+        const span = document.createElement("span");
+        span.style.padding = "6px 10px";
+        span.style.borderRadius = "5px";
+        span.style.background = c.status === "Alive" ? "#2e7d32" : "#b71c1c";
+        span.style.color = "#fff";
+        span.style.fontSize = "13px";
+        span.innerHTML = `${c.name} <small style='opacity:0.7;'>(${c.archetype.name})</small>`;
+        container.appendChild(span);
+    });
+}
+
+</script>
 </body>
 </html>
