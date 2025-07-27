@@ -982,7 +982,14 @@
             movieComplete: false,
             storyQueue: [],
             currentStoryIndex: 0,
-            relationships: new Map() // Track all character relationships
+            relationships: new Map(), // Track all character relationships
+            narrativeState: {
+                suspicionLevels: new Map(), // Track who suspects whom
+                groupDynamics: [], // Current group formations
+                currentLocation: 'house',
+                timeOfDay: 'evening',
+                dangerLevel: 'low' // low, medium, high, extreme
+            }
         };
 
 
@@ -1057,6 +1064,841 @@
             
             // Quick demo of relationship types
             console.log('Available relationship types:', relationshipTypes);
+        }
+
+
+        // Character Memory System
+        class CharacterMemory {
+            constructor(characterId) {
+                this.characterId = characterId;
+                this.experiences = [];
+                this.suspicions = new Map();
+                this.emotionalState = 'calm';
+                this.witnessedDeaths = [];
+                this.lastKnownLocation = '';
+            }
+
+            addExperience(event) {
+                this.experiences.push({
+                    ...event,
+                    timestamp: Date.now(),
+                    act: gameState.currentAct
+                });
+                this.updateEmotionalState(event);
+            }
+
+            updateEmotionalState(event) {
+                const character = gameState.characters.find(c => c.id === this.characterId);
+                if (!character) return;
+
+                switch(event.type) {
+                    case 'death':
+                        this.witnessedDeaths.push(event.victim);
+                        if (this.witnessedDeaths.length >= 3) {
+                            this.emotionalState = 'broken';
+                        } else if (event.victim && getRelationship(character, event.victim)) {
+                            this.emotionalState = 'devastated';
+                        } else {
+                            this.emotionalState = 'terrified';
+                        }
+                        break;
+                    case 'attack':
+                        this.emotionalState = 'panicked';
+                        break;
+                    case 'discovery':
+                        this.emotionalState = 'suspicious';
+                        break;
+                    case 'safe_moment':
+                        if (this.witnessedDeaths.length === 0) {
+                            this.emotionalState = 'calm';
+                        } else {
+                            this.emotionalState = 'nervous';
+                        }
+                        break;
+                }
+            }
+        }
+
+        // Campy Horror Dialogue System - All 20 Archetypes
+        const campyHorrorDialogue = {
+            'The Final Girl': {
+                death_reactions: [
+                    "No! This ends NOW! I won't let anyone else die!",
+                    "I should have seen this coming... I should have protected them!",
+                    "That's it! We're getting out of here RIGHT NOW!",
+                    "I'm not losing anyone else tonight!",
+                    "Why does this always happen to us?!",
+                    "We need to stick together - it's our only chance!"
+                ],
+                attack_reactions: [
+                    "Get away from them, you psycho!",
+                    "Not on my watch!",
+                    "I'll fight you to the death!",
+                    "You picked the wrong girl to mess with!",
+                    "This stops here and now!"
+                ],
+                suspicious_moments: [
+                    "Something's not right about you...",
+                    "I've got my eye on you.",
+                    "Don't think I haven't noticed your behavior.",
+                    "You're hiding something, aren't you?",
+                    "I don't trust you as far as I can throw you."
+                ],
+                terrified: [
+                    "This is like a nightmare I can't wake up from!",
+                    "How is this real?! How is any of this REAL?!",
+                    "I just want to go home... I just want this to be over!",
+                    "Please tell me this is some sick joke!",
+                    "I can't... I can't handle much more of this..."
+                ]
+            },
+            'The Flirt': {
+                death_reactions: [
+                    "OMG, this is SO not cute! I'm having a total breakdown!",
+                    "My mascara is RUINED! And so is my night!",
+                    "This is literally the worst date EVER!",
+                    "I broke a nail running! This killer owes me a manicure!",
+                    "I didn't dress up to die tonight!",
+                    "Can we please focus on MY survival here?!"
+                ],
+                attack_reactions: [
+                    "Don't you DARE mess up my hair!",
+                    "These shoes cost more than your car!",
+                    "Security! SECURITY! Where's security?!",
+                    "I am NOT dying in this outfit!",
+                    "You are SO getting a bad Yelp review!"
+                ],
+                suspicious_moments: [
+                    "Ew, you're giving me major creeper vibes.",
+                    "Are you, like, hitting on me or planning to kill me?",
+                    "Your energy is totally off and not in a good way.",
+                    "I've dated psychos before, but you're next level.",
+                    "Something about you screams 'stay away.'"
+                ],
+                terrified: [
+                    "This is NOT the kind of attention I wanted!",
+                    "I'm too pretty to die! Way too pretty!",
+                    "Can we call my daddy? He'll fix this!",
+                    "I'm having the worst hair day AND I'm gonna die!",
+                    "This is going to ruin my Instagram aesthetic!"
+                ]
+            },
+            'The Jock': {
+                death_reactions: [
+                    "That's it! I'm gonna pound this freak into the ground!",
+                    "Nobody hurts my team! NOBODY!",
+                    "I'll bench press this killer's corpse!",
+                    "Time to show this punk what real strength looks like!",
+                    "Coach always said protect your teammates!",
+                    "Game over, psycho! GAME OVER!"
+                ],
+                attack_reactions: [
+                    "Come at me, bro! I DARE you!",
+                    "Is that all you got?! My grandma hits harder!",
+                    "I eat punks like you for breakfast!",
+                    "You just picked a fight with the wrong guy!",
+                    "Time to take you to school!"
+                ],
+                suspicious_moments: [
+                    "I don't like the cut of your jib, pal.",
+                    "You seem like the type who gets stuffed in lockers.",
+                    "Something's off about you, and I don't like it.",
+                    "I've got my eye on you, weirdo.",
+                    "You're acting sketchy, and I don't trust sketchy."
+                ],
+                terrified: [
+                    "This is way worse than losing the championship!",
+                    "I can't protect everyone... I'm failing them!",
+                    "Coach never prepared us for THIS!",
+                    "I'm supposed to be the strong one!",
+                    "Even my muscles can't save us from this!"
+                ]
+            },
+            'The Nerd': {
+                death_reactions: [
+                    "According to my calculations, this shouldn't be happening!",
+                    "The statistical probability of survival is dropping rapidly!",
+                    "I need more data! I can't solve this without more data!",
+                    "This defies all logical explanation!",
+                    "Error 404: Rational thinking not found!",
+                    "My algorithms didn't account for this variable!"
+                ],
+                attack_reactions: [
+                    "Fascinating! The killer shows signs of advanced psychological deterioration!",
+                    "This is highly illogical behavior!",
+                    "Your methodology is flawed and inefficient!",
+                    "I'll document this for my future thesis!",
+                    "Scientifically speaking, you're completely insane!"
+                ],
+                suspicious_moments: [
+                    "Your behavioral patterns indicate deception.",
+                    "I've been running probability analyses on everyone here.",
+                    "The evidence strongly suggests you're the perpetrator.",
+                    "My observations have led me to one conclusion...",
+                    "The data doesn't lie, and it all points to you."
+                ],
+                terrified: [
+                    "This is outside my area of expertise!",
+                    "I need to recalibrate my entire worldview!",
+                    "Science can't explain this madness!",
+                    "My brain is experiencing a fatal error!",
+                    "Logic has completely abandoned me!"
+                ]
+            },
+            'The Stoner': {
+                death_reactions: [
+                    "Dude... that's some seriously bad karma right there...",
+                    "This is, like, the ultimate buzzkill, man.",
+                    "The universe is seriously out of balance tonight.",
+                    "That's some heavy stuff... really heavy.",
+                    "I'm getting some seriously dark energy here.",
+                    "This is messing with my chakras in a major way."
+                ],
+                attack_reactions: [
+                    "Whoa, man! Can't we all just get along?",
+                    "Violence is never the answer, dude!",
+                    "This is seriously harsh my mellow!",
+                    "I thought you were cool, but you're totally not cool!",
+                    "Bad vibes, man! REALLY bad vibes!"
+                ],
+                suspicious_moments: [
+                    "You're giving off some weird energy, dude.",
+                    "My third eye is telling me you're trouble.",
+                    "Something about your aura is totally off.",
+                    "I'm sensing some dark intentions from you.",
+                    "The spirits are warning me about you, man."
+                ],
+                terrified: [
+                    "This is like the worst trip ever, and I'm not even high!",
+                    "The cosmic balance is totally screwed!",
+                    "I need to find my center... where's my center?!",
+                    "This is seriously messing with my zen!",
+                    "Even my meditation techniques aren't working!"
+                ]
+            },
+            'The Rich Girl': {
+                death_reactions: [
+                    "This is UNACCEPTABLE! I demand to speak to your manager!",
+                    "Do you know who my father is?! He'll SUE everyone!",
+                    "I'm calling my lawyer! And my bodyguard! And my daddy!",
+                    "This wouldn't happen at the country club!",
+                    "I'm not supposed to be here! This is for poor people!",
+                    "My trust fund does NOT cover this kind of trauma!"
+                ],
+                attack_reactions: [
+                    "Don't you dare touch me! I'm worth millions!",
+                    "Security! Where is my personal security detail?!",
+                    "I'll have you arrested! My father owns the police!",
+                    "You can't do this to me! I'm IMPORTANT!",
+                    "This dress cost more than your house!"
+                ],
+                suspicious_moments: [
+                    "You look like you shop at discount stores.",
+                    "I don't associate with people like you.",
+                    "Your social credit score must be terrible.",
+                    "You probably can't even afford to be suspicious.",
+                    "I bet you're jealous of my lifestyle."
+                ],
+                terrified: [
+                    "Money can't buy me out of this nightmare!",
+                    "I've never been this powerless in my LIFE!",
+                    "Why isn't my privilege protecting me?!",
+                    "This is worse than when daddy cut my allowance!",
+                    "I'm not equipped to handle poor people problems!"
+                ]
+            },
+            'The Bad Boy': {
+                death_reactions: [
+                    "That's it. This freak just signed their death warrant.",
+                    "I've seen some messed up stuff, but this is next level.",
+                    "Time to handle this the hard way.",
+                    "I'm gonna make this killer regret the day they were born.",
+                    "Nobody kills my people. NOBODY.",
+                    "This punk just picked a war with the wrong guy."
+                ],
+                attack_reactions: [
+                    "You think you're tough? Let me show you tough!",
+                    "I've been in prison fights scarier than you!",
+                    "Come on then! Let's dance!",
+                    "I eat punks like you for breakfast!",
+                    "You just made the biggest mistake of your short life!"
+                ],
+                suspicious_moments: [
+                    "I can smell trouble on you from a mile away.",
+                    "Your type always thinks they're smarter than they are.",
+                    "I've dealt with scum like you before.",
+                    "You got that guilty look written all over your face.",
+                    "I know a snake when I see one."
+                ],
+                terrified: [
+                    "This is worse than anything I faced on the streets...",
+                    "Even the toughest cons would run from this!",
+                    "I thought I was the scariest thing in the room...",
+                    "My street cred can't protect me from this!",
+                    "For the first time in my life... I'm actually scared."
+                ]
+            },
+            'The Innocent': {
+                death_reactions: [
+                    "Why would someone do something so horrible?!",
+                    "I don't understand! People are supposed to be good!",
+                    "This can't be real! Please tell me this is a nightmare!",
+                    "I just want everyone to be safe and happy!",
+                    "There has to be good left in the world... there has to be!",
+                    "Maybe if we just talk to them, we can work this out?"
+                ],
+                attack_reactions: [
+                    "Please don't hurt me! I've never hurt anyone!",
+                    "I forgive you! Whatever made you this way, I forgive you!",
+                    "You don't have to do this! You can choose to be good!",
+                    "There's still time to stop! You can still be saved!",
+                    "I believe there's good in everyone... even you!"
+                ],
+                suspicious_moments: [
+                    "I want to trust you, but something feels wrong...",
+                    "You seem sad... are you okay?",
+                    "Maybe you're just misunderstood?",
+                    "I hope I'm wrong about you...",
+                    "Please tell me you're one of the good guys..."
+                ],
+                terrified: [
+                    "I don't want to believe people can be this evil!",
+                    "My whole worldview is crumbling!",
+                    "How can there be so much darkness in the world?",
+                    "I just want to go home to my family!",
+                    "Please let there be some hope left... please..."
+                ]
+            },
+            'The Outcast': {
+                death_reactions: [
+                    "I TOLD you something was wrong! But did anyone listen? NO!",
+                    "This is exactly what I predicted would happen!",
+                    "I tried to warn everyone, but you all thought I was crazy!",
+                    "I've been preparing for this my whole life!",
+                    "Finally! Someone who understands true darkness!",
+                    "I knew this day would come... I've been ready."
+                ],
+                attack_reactions: [
+                    "You think darkness scares me? I AM the darkness!",
+                    "I've been living in nightmares my whole life!",
+                    "You picked the wrong weirdo to mess with!",
+                    "I know things about pain you couldn't imagine!",
+                    "Death has been my only friend for years!"
+                ],
+                suspicious_moments: [
+                    "I see the evil in your soul... it calls to mine.",
+                    "You can't hide your true nature from me.",
+                    "I recognize a kindred spirit when I see one.",
+                    "The shadows whisper secrets about you.",
+                    "Your darkness is almost as deep as mine... almost."
+                ],
+                terrified: [
+                    "Even I didn't expect it to be this bad...",
+                    "This is beyond anything I imagined in my darkest dreams!",
+                    "Maybe being alone forever wasn't the worst fate...",
+                    "I thought I knew what horror looked like!",
+                    "I've stared into the abyss... but this stares back!"
+                ]
+            },
+            'The Party Girl': {
+                death_reactions: [
+                    "This is NOT the kind of party I signed up for!",
+                    "Someone seriously needs to change the music!",
+                    "This party has officially jumped the shark!",
+                    "Can we please get back to having FUN?!",
+                    "This is worse than a dry wedding!",
+                    "I've been to some wild parties, but this is INSANE!"
+                ],
+                attack_reactions: [
+                    "You are seriously ruining the vibe!",
+                    "This is the worst party crasher EVER!",
+                    "Security! We need better security at this party!",
+                    "You're not on the guest list, psycho!",
+                    "I'm giving this party zero stars!"
+                ],
+                suspicious_moments: [
+                    "You're being a real party pooper.",
+                    "Are you always this much of a downer?",
+                    "You're giving off serious bad party guest vibes.",
+                    "I bet you're the type who leaves early.",
+                    "Something about you screams 'doesn't know how to have fun.'"
+                ],
+                terrified: [
+                    "This is the WORST party ever! One star review!",
+                    "I just wanted to dance and have a good time!",
+                    "Why can't people just party responsibly?!",
+                    "This is going to ruin my social media!",
+                    "I'm never attending another house party again!"
+                ]
+            },
+            'The Skeptic': {
+                death_reactions: [
+                    "There's a perfectly rational explanation for this!",
+                    "This has to be some kind of elaborate hoax!",
+                    "Someone's using psychological manipulation!",
+                    "I refuse to believe in supernatural nonsense!",
+                    "This is just advanced special effects!",
+                    "Science will explain everything once we investigate!"
+                ],
+                attack_reactions: [
+                    "Your tricks won't work on someone with a logical mind!",
+                    "I see through your cheap parlor tricks!",
+                    "This is all smoke and mirrors!",
+                    "You're just a human with psychological problems!",
+                    "I'll expose your methods to everyone!"
+                ],
+                suspicious_moments: [
+                    "I'm analyzing your behavior patterns.",
+                    "Your story has several logical inconsistencies.",
+                    "The evidence suggests you're hiding something.",
+                    "I'll apply scientific method to figure you out.",
+                    "Your claims don't hold up under scrutiny."
+                ],
+                terrified: [
+                    "This challenges everything I believe about reality!",
+                    "How can I explain this with science?!",
+                    "My rational worldview is completely shattered!",
+                    "There has to be a logical explanation... HAS TO BE!",
+                    "I'm having a crisis of faith in reason itself!"
+                ]
+            },
+            'The Hero': {
+                death_reactions: [
+                    "I swear on my honor, I'll stop this monster!",
+                    "No more innocent blood will be spilled tonight!",
+                    "Their sacrifice will not be in vain!",
+                    "I'll protect everyone else with my life!",
+                    "Evil will NOT triumph while I still breathe!",
+                    "This ends here and now!"
+                ],
+                attack_reactions: [
+                    "You face a true champion of justice!",
+                    "I'll stop you with the power of righteousness!",
+                    "Evil cannot defeat pure heroism!",
+                    "For truth, justice, and the innocent!",
+                    "Your reign of terror ends with me!"
+                ],
+                suspicious_moments: [
+                    "My heroic instincts are warning me about you.",
+                    "A true hero can sense evil in their presence.",
+                    "Justice will reveal your true nature.",
+                    "I'll be watching you very carefully.",
+                    "My duty is to protect others from people like you."
+                ],
+                terrified: [
+                    "I've failed as a protector... how can I live with this?",
+                    "Even heroes have limits... and I've found mine.",
+                    "I'm supposed to be the one saving everyone!",
+                    "How can evil be this powerful?!",
+                    "I need to find my courage... everyone's counting on me!"
+                ]
+            },
+            'The Coward': {
+                death_reactions: [
+                    "I'm getting OUT of here! Every man for himself!",
+                    "NOPE! Not dealing with this! I'm DONE!",
+                    "I didn't sign up for a death sentence!",
+                    "Self-preservation mode: ACTIVATED!",
+                    "I'm too young and too scared to die!",
+                    "Someone else can be the hero! I'm RUNNING!"
+                ],
+                attack_reactions: [
+                    "Please don't kill me! I'll do anything!",
+                    "I'm not brave! I'm a total coward! Please!",
+                    "I promise I won't tell anyone anything!",
+                    "I'll hide and never bother you again!",
+                    "There are braver people here! Pick them!"
+                ],
+                suspicious_moments: [
+                    "I don't trust ANYONE right now!",
+                    "Everyone's a potential killer to me!",
+                    "I'm suspicious of literally everyone!",
+                    "You could be the murderer! Anyone could be!",
+                    "I'm not taking any chances with ANYONE!"
+                ],
+                terrified: [
+                    "I can't handle this! I CAN'T HANDLE THIS!",
+                    "Why did I leave my house?! Why?!",
+                    "I should have stayed home with my cats!",
+                    "This is exactly why I avoid social situations!",
+                    "I'm having a full panic attack right now!"
+                ]
+            },
+            'The Goth': {
+                death_reactions: [
+                    "Death comes for us all... some sooner than others.",
+                    "Ah, the sweet embrace of eternal darkness.",
+                    "Finally, some real entertainment in this boring world.",
+                    "Death is just another door to a darker room.",
+                    "How beautifully macabre... like poetry in motion.",
+                    "The darkness has finally revealed its true face."
+                ],
+                attack_reactions: [
+                    "You think death frightens me? I've been flirting with it for years.",
+                    "How deliciously twisted... I almost admire your style.",
+                    "Pain is just another form of dark poetry.",
+                    "You're not nearly as dark as you think you are.",
+                    "I've seen deeper darkness in my own soul."
+                ],
+                suspicious_moments: [
+                    "I can smell the decay of your soul from here.",
+                    "Your aura reeks of death and corruption.",
+                    "The shadows whisper dark secrets about you.",
+                    "I recognize a fellow creature of darkness.",
+                    "Your inner demons are showing."
+                ],
+                terrified: [
+                    "This darkness is too real... even for me!",
+                    "I thought I understood the void... but this IS the void!",
+                    "My romanticized view of death is crumbling!",
+                    "Real horror makes my poetry look like children's songs!",
+                    "The abyss isn't as romantic as I thought!"
+                ]
+            },
+            'The Tomboy': {
+                death_reactions: [
+                    "That's it! I'm done playing defense!",
+                    "Time to show this creep what a real fight looks like!",
+                    "I didn't climb trees and scrape knees to die like this!",
+                    "Let's see how tough they are against someone who fights back!",
+                    "I've been in tougher scraps in middle school!",
+                    "Nobody messes with my crew! NOBODY!"
+                ],
+                attack_reactions: [
+                    "Is that all you got?! My little brother hits harder!",
+                    "You picked the wrong girl to mess with!",
+                    "I've been waiting for a good fight all night!",
+                    "Come on! Let's see what you're really made of!",
+                    "Time to show you how we handle bullies!"
+                ],
+                suspicious_moments: [
+                    "Something about you rubs me the wrong way.",
+                    "I don't like your attitude, pal.",
+                    "You're acting shady, and I don't like shady.",
+                    "My gut says you're trouble.",
+                    "I've got my eye on you, weirdo."
+                ],
+                terrified: [
+                    "I'm tough, but this is beyond anything I've faced!",
+                    "All my scrapping experience means nothing here!",
+                    "I thought I was ready for anything... I was wrong!",
+                    "Being tough doesn't help when the world goes insane!",
+                    "I need to find my inner strength... fast!"
+                ]
+            },
+            'The Drama Queen': {
+                death_reactions: [
+                    "This is the WORST tragedy in the HISTORY of tragedies!",
+                    "I am literally having the most DRAMATIC moment of my LIFE!",
+                    "This is like Shakespeare's WORST nightmare!",
+                    "I can't BELIEVE this is happening to ME!",
+                    "This is more dramatic than ALL my favorite soap operas!",
+                    "I am the STAR of my own horror movie!"
+                ],
+                attack_reactions: [
+                    "You're ruining my MOMENT! This is MY scene!",
+                    "I refuse to be a supporting character in my own death!",
+                    "This is NOT how my story is supposed to end!",
+                    "I demand better dialogue if I'm going to die!",
+                    "At least make my death MEMORABLE and BEAUTIFUL!"
+                ],
+                suspicious_moments: [
+                    "You're giving me MAJOR villain vibes!",
+                    "I can sense the DRAMA radiating from you!",
+                    "You're obviously the antagonist in this story!",
+                    "Your suspicious behavior is TOTALLY obvious!",
+                    "I've seen enough movies to know YOU'RE the killer!"
+                ],
+                terrified: [
+                    "This is NOT the starring role I wanted!",
+                    "I'm too BEAUTIFUL to die in a B-movie!",
+                    "My agent never prepared me for THIS kind of role!",
+                    "This better have a HAPPY ending or I want a refund!",
+                    "I demand to speak to the director of this nightmare!"
+                ]
+            },
+            'The Boyfriend': {
+                death_reactions: [
+                    "I swear I'll protect her with my last breath!",
+                    "Nobody touches my girl! NOBODY!",
+                    "If anything happens to her, I'll kill you myself!",
+                    "She's everything to me! I won't let you hurt her!",
+                    "Our love will survive this nightmare!",
+                    "I'd rather die than let her get hurt!"
+                ],
+                attack_reactions: [
+                    "Stay away from my girlfriend!",
+                    "You want to get to her? You go through ME first!",
+                    "Real men protect the people they love!",
+                    "I'll fight you to the death for her!",
+                    "Love gives me strength you can't imagine!"
+                ],
+                suspicious_moments: [
+                    "If you hurt her, I'll end you.",
+                    "I don't like how you look at my girl.",
+                    "Something about you screams 'stay away from my girlfriend.'",
+                    "I'm watching you, and I don't like what I see.",
+                    "You better keep your distance from her."
+                ],
+                terrified: [
+                    "I have to find her! Where is she?!",
+                    "I can't protect her if I can't find her!",
+                    "Please let her be safe... please let her be okay!",
+                    "I'm failing as her boyfriend!",
+                    "Love should be enough to save us both!"
+                ]
+            },
+            'The Best Friend': {
+                death_reactions: [
+                    "We promised we'd always be there for each other!",
+                    "Best friends stick together through EVERYTHING!",
+                    "I won't let anyone hurt my bestie!",
+                    "We've been through so much together!",
+                    "Friendship is stronger than fear!",
+                    "BFFs forever means FOREVER!"
+                ],
+                attack_reactions: [
+                    "Don't you DARE touch my best friend!",
+                    "Friendship power activate!",
+                    "You mess with her, you mess with me!",
+                    "Best friends defend each other!",
+                    "Our friendship will defeat you!"
+                ],
+                suspicious_moments: [
+                    "I don't trust you around my best friend.",
+                    "My bestie deserves better people in her life.",
+                    "Something about you threatens our friendship.",
+                    "I can sense when someone's bad for my friend.",
+                    "Best friend intuition is telling me to watch you."
+                ],
+                terrified: [
+                    "I can't lose my best friend!",
+                    "She's like a sister to me!",
+                    "How can I live without my other half?",
+                    "Our friendship is all I have!",
+                    "Please don't let anything happen to her!"
+                ]
+            },
+            'The Reporter': {
+                death_reactions: [
+                    "This is the story of the century!",
+                    "I need to document everything for posterity!",
+                    "The world NEEDS to know what happened here!",
+                    "This will win me a Pulitzer... if I survive!",
+                    "My journalistic duty demands I get the truth!",
+                    "I'm not just a witness, I'm a recorder of history!"
+                ],
+                attack_reactions: [
+                    "You can kill me, but you can't kill the truth!",
+                    "The story will get out no matter what!",
+                    "I've interviewed war criminals scarier than you!",
+                    "Freedom of the press means something!",
+                    "This is going straight to the front page!"
+                ],
+                suspicious_moments: [
+                    "I've interviewed enough criminals to spot one.",
+                    "My investigative instincts are screaming about you.",
+                    "I smell a story, and it reeks of guilt.",
+                    "Years of journalism have taught me to read people.",
+                    "You've got that 'guilty as sin' look down pat."
+                ],
+                terrified: [
+                    "This story is too big for just one reporter!",
+                    "I signed up to report news, not become it!",
+                    "How do I file a story if I don't survive?",
+                    "The truth is scarier than any fiction!",
+                    "My press badge isn't protecting me from this!"
+                ]
+            },
+            'The Horror Fanatic': {
+                death_reactions: [
+                    "This is EXACTLY like in 'Blood Camp Massacre 3'!",
+                    "I've seen this movie! I know how it ends!",
+                    "Classic slasher movie setup! Textbook execution!",
+                    "The kill count is rising right on schedule!",
+                    "This is better than any movie I've ever seen!",
+                    "Real horror is so much more intense than film!"
+                ],
+                attack_reactions: [
+                    "Wait! You're breaking the genre conventions!",
+                    "That's not how killers are supposed to behave!",
+                    "I know all the horror movie rules!",
+                    "You can't kill the horror expert! That's against the rules!",
+                    "This doesn't follow proper slasher methodology!"
+                ],
+                suspicious_moments: [
+                    "You fit the killer profile perfectly!",
+                    "I've seen enough horror movies to spot the murderer!",
+                    "Classic red herring behavior, but I'm not fooled!",
+                    "Your MO matches seventeen different slasher films!",
+                    "I know a final boss when I see one!"
+                ],
+                terrified: [
+                    "This doesn't follow ANY of the established rules!",
+                    "Real horror is nothing like the movies!",
+                    "All my genre knowledge is useless!",
+                    "I thought I was prepared for this!",
+                    "The movies never showed how terrifying this really is!"
+                ]
+            }
+        };
+
+        // Enhanced dialogue generation
+        function generateCampyDialogue(character, situation, context = {}) {
+            const archetype = character.archetype.name;
+            const dialogueSet = campyHorrorDialogue[archetype];
+            
+            if (!dialogueSet) {
+                return getGenericCampyDialogue(situation, character.name);
+            }
+
+            let emotionalState = 'terrified';
+            if (character.memory) {
+                emotionalState = character.memory.emotionalState;
+            }
+
+            let dialogueArray;
+            switch(situation) {
+                case 'death':
+                    dialogueArray = dialogueSet.death_reactions;
+                    break;
+                case 'attack':
+                    dialogueArray = dialogueSet.attack_reactions;
+                    break;
+                case 'suspicious':
+                    dialogueArray = dialogueSet.suspicious_moments;
+                    break;
+                case 'terrified':
+                    dialogueArray = dialogueSet.terrified;
+                    break;
+                default:
+                    dialogueArray = dialogueSet.terrified;
+            }
+
+            const selectedDialogue = dialogueArray[Math.floor(Math.random() * dialogueArray.length)];
+            
+            // Add relationship context if available
+            if (context.relationshipTarget) {
+                const relationship = getRelationship(character, context.relationshipTarget);
+                if (relationship) {
+                    return modifyDialogueForRelationship(selectedDialogue, relationship, character, context.relationshipTarget, character.name);
+                }
+            }
+
+            return `"${selectedDialogue}" - ${character.name}`;
+        }
+
+        function modifyDialogueForRelationship(dialogue, relationship, speaker, target, speakerName) {
+            const relType = relationship.type;
+            const targetName = target.name;
+            
+            switch(relType) {
+                case relationshipTypes.ROMANTIC:
+                    if (dialogue.includes('her') || dialogue.includes('girlfriend')) {
+                        return `"${dialogue}" - ${speakerName}`;
+                    }
+                    return `"${dialogue.replace(/you|them|they/gi, `${targetName}, my love`)}" - ${speakerName}`;
+                case relationshipTypes.BEST_FRIENDS:
+                    return `"${dialogue.replace(/you|them|they/gi, `${targetName}, bestie`)}" - ${speakerName}`;
+                case relationshipTypes.FAMILY:
+                    return `"${dialogue.replace(/you|them|they/gi, `${targetName}, my family`)}" - ${speakerName}`;
+                case relationshipTypes.ENEMIES:
+                    return `"${dialogue.replace(/you|them|they/gi, `that jerk ${targetName}`)}" - ${speakerName}`;
+                case relationshipTypes.EX_LOVERS:
+                    return `"${dialogue.replace(/you|them|they/gi, `${targetName}... my ex`)}" - ${speakerName}`;
+                default:
+                    return `"${dialogue}" - ${speakerName}`;
+            }
+        }
+
+        function getGenericCampyDialogue(situation, characterName) {
+            const generic = {
+                death: [
+                    "Oh no! This is like a bad horror movie!",
+                    "Why does this always happen to us?!",
+                    "I didn't sign up for this nightmare!",
+                    "This is worse than my worst fears!"
+                ],
+                attack: [
+                    "Help me! Somebody help me!",
+                    "Get away from me, you psycho!",
+                    "This can't be happening!",
+                    "I'm too young to die!"
+                ],
+                suspicious: [
+                    "Something's not right about you...",
+                    "I've got a bad feeling about this.",
+                    "You're acting really weird.",
+                    "I don't trust you one bit."
+                ],
+                terrified: [
+                    "This is the worst night of my life!",
+                    "I just want to go home!",
+                    "Please let this be a nightmare!",
+                    "How is this real?!"
+                ]
+            };
+            
+            const options = generic[situation] || generic.terrified;
+            const selectedDialogue = options[Math.floor(Math.random() * options.length)];
+            return `"${selectedDialogue}" - ${characterName}`;
+        }
+
+        // Initialize character memories when characters are created
+        function initializeCharacterMemories() {
+            gameState.characters.forEach(character => {
+                if (!character.memory) {
+                    character.memory = new CharacterMemory(character.id);
+                }
+            });
+        }
+
+        // Generate random character reactions to events
+        function addRandomCharacterReactions(eventType, numReactions = 2) {
+            // Don't add reactions if movie is complete
+            if (gameState.movieComplete) return;
+            
+            const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            if (aliveCharacters.length === 0) return;
+
+            // Shuffle and pick random characters to react
+            const shuffled = [...aliveCharacters].sort(() => 0.5 - Math.random());
+            const reactors = shuffled.slice(0, Math.min(numReactions, aliveCharacters.length));
+
+            reactors.forEach((character, index) => {
+                setTimeout(() => {
+                    // Double-check movie isn't complete when timeout executes
+                    if (gameState.movieComplete) return;
+                    
+                    // Update character's memory
+                    if (character.memory) {
+                        character.memory.addExperience({ type: eventType });
+                    }
+
+                    // Generate dialogue based on situation
+                    let situation = eventType;
+                    if (character.memory && character.memory.witnessedDeaths.length >= 2) {
+                        situation = 'terrified';
+                    }
+
+                    const dialogue = generateCampyDialogue(character, situation);
+                    addEvent('dialogue', dialogue);
+                }, index * 800); // Stagger reactions
+            });
+        }
+
+        // Enhanced story progression with character memories
+        function addCharacterMemoriesToEvent(eventType, specificCharacter = null) {
+            if (specificCharacter && specificCharacter.memory) {
+                specificCharacter.memory.addExperience({ type: eventType });
+            } else {
+                // Add to all living characters' memories
+                gameState.characters.forEach(character => {
+                    if (character.status === 'Alive' && character.memory) {
+                        character.memory.addExperience({ type: eventType });
+                    }
+                });
+            }
         }
 
 
@@ -1445,7 +2287,8 @@
                         deathAct: null,
                         survivalChance: calculateSurvivalChance(archetype.stats),
                         edgic: { 1: 'UTR1', 2: 'UTR1', 3: 'UTR1' },
-                        isReturning: false
+                        isReturning: false,
+                        memory: new CharacterMemory(i)
                     };
                     
                     gameState.characters.push(character);
@@ -1579,10 +2422,13 @@ setupScreen.innerHTML = `
     
     <div id="relationship-pairs" style="display: grid; gap: 15px; margin-bottom: 20px;"></div>
     
-    <div style="margin: 16px 0; padding: 10px 15px; background: #1a1a1a; border: 1px solid #555; border-radius: 8px; color: #fff; font-size: 15px;">
+    <div style="margin: 16px 0; padding: 15px; background: #1a1a1a; border: 1px solid #555; border-radius: 8px; color: #fff; font-size: 15px;">
         <strong>Relationship Legend:</strong><br/><br/>
-        💕 Romantic Partners &nbsp;&nbsp;&nbsp;&nbsp;  👪 Family Member &nbsp;&nbsp;&nbsp;&nbsp;  🤝 Friends/Acquaintances &nbsp;&nbsp;&nbsp;&nbsp; 😡 Enemies<br/>
-        🧊 Exes / Broken Up &nbsp;&nbsp;&nbsp;&nbsp; ⚔️ Mutual Hatred &nbsp;&nbsp;&nbsp;&nbsp; 🧍 No Relationship
+        💕 Romantic Couple &nbsp;&nbsp;&nbsp;&nbsp;  👥 Best Friends &nbsp;&nbsp;&nbsp;&nbsp;  👪 Family &nbsp;&nbsp;&nbsp;&nbsp; ⚔️ Enemies<br/>
+        💔 Ex-Lovers &nbsp;&nbsp;&nbsp;&nbsp; 🤝 Neutral/No Relationship<br/><br/>
+        <div style="color: #aaa; font-size: 13px; border-top: 1px solid #555; padding-top: 10px; margin-top: 10px;">
+            💡 <strong>How to use:</strong> Click any cell to cycle through relationship types. Both characters will automatically get the same relationship!
+        </div>
     </div>
 
     <div style="text-align: center; margin-top: 20px;">
@@ -1629,7 +2475,11 @@ function displayRelationshipPairs() {
             } else {
                 const rel = getRelationship(rowChar, colChar);
                 const emoji = rel ? rel.type.emoji : "🤝";
-                rowHTML += "<td style='cursor:pointer;' onclick='cycleRelationship(" + rowChar.id + "," + colChar.id + ", this)'>" + emoji + "</td>";
+                const isSpecialRelationship = emoji !== "🤝";
+                const bgColor = isSpecialRelationship ? "#2a2a2a" : "transparent";
+                const borderStyle = isSpecialRelationship ? "2px solid #555" : "1px solid #444";
+                const originalBg = bgColor;
+                rowHTML += "<td id='cell-" + rowChar.id + "-" + colChar.id + "' style='cursor:pointer; padding: 12px; border: " + borderStyle + "; background-color: " + bgColor + "; transition: all 0.2s; font-size: 18px;' onmouseover='this.style.backgroundColor=\"#333\"; this.style.transform=\"scale(1.1)\"' onmouseout='this.style.backgroundColor=\"" + originalBg + "\"; this.style.transform=\"scale(1)\"' onclick='cycleRelationship(" + rowChar.id + "," + colChar.id + ", this)'>" + emoji + "</td>";
             }
         });
         rowHTML += "</tr>";
@@ -1651,7 +2501,38 @@ function cycleRelationship(char1Id, char2Id, cell) {
     }
     const nextType = relationshipTypes[types[nextIndex]];
     createRelationship(char1, char2, nextType);
-    cell.innerHTML = nextType.emoji;
+    
+    // Update both cells in the matrix (bidirectional)
+    updateRelationshipMatrix(char1Id, char2Id, nextType.emoji);
+}
+
+function updateRelationshipMatrix(char1Id, char2Id, emoji) {
+    // Update both cells in the relationship matrix
+    const cell1 = document.getElementById('cell-' + char1Id + '-' + char2Id);
+    const cell2 = document.getElementById('cell-' + char2Id + '-' + char1Id);
+    
+    if (cell1) {
+        cell1.innerHTML = emoji;
+        // Add visual feedback for non-neutral relationships
+        if (emoji !== '🤝') {
+            cell1.style.backgroundColor = '#2a2a2a';
+            cell1.style.border = '2px solid #555';
+        } else {
+            cell1.style.backgroundColor = 'transparent';
+            cell1.style.border = '1px solid #444';
+        }
+    }
+    if (cell2) {
+        cell2.innerHTML = emoji;
+        // Add visual feedback for non-neutral relationships
+        if (emoji !== '🤝') {
+            cell2.style.backgroundColor = '#2a2a2a';
+            cell2.style.border = '2px solid #555';
+        } else {
+            cell2.style.backgroundColor = 'transparent';
+            cell2.style.border = '1px solid #444';
+        }
+    }
 }
 function setRelationship(char1Id, char2Id, relationshipKey) {
             const char1 = gameState.characters.find(c => c.id === char1Id);
@@ -2001,6 +2882,10 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 // Add relationship-specific reactions from survivors
                 setTimeout(() => {
                     addRelationshipReactions(victim, 'death');
+                    // Add random character reactions for more variety
+                    setTimeout(() => {
+                        addRandomCharacterReactions('death', 1);
+                    }, 1500);
                 }, 1000);
                 
                 addEvent('killer-thought', `You feel a rush of adrenaline. The kill was clean and efficient.`);
@@ -2084,6 +2969,9 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
 
 
         function addRelationshipReactions(victim, eventType) {
+            // Don't add reactions if movie is complete
+            if (gameState.movieComplete) return;
+            
             const victimRelationships = getCharacterRelationships(victim);
             const aliveRelationships = victimRelationships.filter(rel => 
                 rel.character.status === 'Alive' && !gameState.killers.includes(rel.character)
@@ -2093,24 +2981,61 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 const reactor = rel.character;
                 const relType = rel.relationship.type;
                 
+                // Update reactor's memory with this event
+                if (reactor.memory) {
+                    reactor.memory.addExperience({
+                        type: eventType,
+                        victim: victim,
+                        relationship: relType
+                    });
+                }
+                
+                // Generate relationship-specific campy dialogue
                 let reaction;
                 if (eventType === 'death') {
+                    reaction = generateCampyDialogue(reactor, 'death', { relationshipTarget: victim });
+                    
+                    // Add special relationship-specific death reactions
                     if (relType === relationshipTypes.ROMANTIC) {
-                        reaction = `"NO! ${victim.name}! My love... this can't be happening!" - ${reactor.name}, devastated`;
+                        const romanticReactions = [
+                            `"NO! ${victim.name}! Our love was supposed to conquer all!" - ${reactor.name}, devastated`,
+                            `"I can't live without you! This is worse than any horror movie!" - ${reactor.name}, sobbing`,
+                            `"${victim.name}, my heart! I'll avenge you if it's the last thing I do!" - ${reactor.name}, furious with grief`
+                        ];
+                        reaction = romanticReactions[Math.floor(Math.random() * romanticReactions.length)];
                     } else if (relType === relationshipTypes.BEST_FRIENDS) {
-                        reaction = `"${victim.name} was my best friend! I'll never forgive whoever did this!" - ${reactor.name}, furious`;
+                        const friendReactions = [
+                            `"My bestie! No, no, NO! We were supposed to survive this together!" - ${reactor.name}, screaming`,
+                            `"${victim.name} was the sister I never had! This killer will PAY!" - ${reactor.name}, enraged`,
+                            `"BFFs forever... I guess forever ended too soon!" - ${reactor.name}, crying`
+                        ];
+                        reaction = friendReactions[Math.floor(Math.random() * friendReactions.length)];
                     } else if (relType === relationshipTypes.FAMILY) {
-                        reaction = `"They killed my family... ${victim.name}... this is unforgivable!" - ${reactor.name}, grief-stricken`;
+                        const familyReactions = [
+                            `"FAMILY DOESN'T DIE LIKE THIS! ${victim.name}, I'll make them pay!" - ${reactor.name}, rage-filled`,
+                            `"They killed my blood! This is war now!" - ${reactor.name}, devastated but determined`,
+                            `"${victim.name}... mom always said protect family... I failed..." - ${reactor.name}, broken`
+                        ];
+                        reaction = familyReactions[Math.floor(Math.random() * familyReactions.length)];
                     } else if (relType === relationshipTypes.ENEMIES) {
-                        reaction = `"I may have hated ${victim.name}, but they didn't deserve this..." - ${reactor.name}, conflicted`;
+                        const enemyReactions = [
+                            `"I may have hated ${victim.name}, but I wanted to be the one to destroy them!" - ${reactor.name}, conflicted`,
+                            `"Even my worst enemy didn't deserve THAT! This killer's insane!" - ${reactor.name}, disturbed`,
+                            `"${victim.name} was a jerk, but at least they were OUR jerk!" - ${reactor.name}, oddly sentimental`
+                        ];
+                        reaction = enemyReactions[Math.floor(Math.random() * enemyReactions.length)];
                     }
                 } else if (eventType === 'attack') {
+                    reaction = generateCampyDialogue(reactor, 'attack', { relationshipTarget: victim });
+                    
+                    // Add special relationship-specific attack reactions
                     if (relType === relationshipTypes.ROMANTIC) {
-                        reaction = `"Are you hurt?! I can't lose you!" - ${reactor.name}, checking on ${victim.name}`;
-                    } else if (relType === relationshipTypes.BEST_FRIENDS) {
-                        reaction = `"Thank god you're alive! I was so scared!" - ${reactor.name}, relieved`;
-                    } else if (relType === relationshipTypes.FAMILY) {
-                        reaction = `"Stay close to me. I won't let anything happen to you." - ${reactor.name}, protective`;
+                        const loveReactions = [
+                            `"DON'T YOU DARE TOUCH MY LOVE! I'll rip you apart!" - ${reactor.name}, protective fury`,
+                            `"${victim.name}! Are you hurt?! This psycho picked the wrong couple!" - ${reactor.name}, checking on them`,
+                            `"Nobody hurts my soulmate! NOBODY!" - ${reactor.name}, ready to fight`
+                        ];
+                        reaction = loveReactions[Math.floor(Math.random() * loveReactions.length)];
                     }
                 }
                 
@@ -2555,6 +3480,10 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             // Add relationship reactions
             setTimeout(() => {
                 addRelationshipReactions(victim, 'death');
+                // Add random character reactions for more variety
+                setTimeout(() => {
+                    addRandomCharacterReactions('death', 1);
+                }, 1500);
             }, 1000);
         }
 
@@ -2699,16 +3628,8 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 return familyLastWords[Math.floor(Math.random() * familyLastWords.length)];
             }
             
-            // Fallback to original final words
-            const finalWords = [
-                `"Wait, I think I left my car unlocked—" *SLICE*`,
-                `"This is exactly how Jennifer died in that movie!" *THUNK*`,
-                `"I should have listened to my therapist about trusting people!" *gurgling*`,
-                `"Why is it always the pretty ones who die first?" *CRASH*`,
-                `"I definitely should have gone to college instead!" *SPLAT*`
-            ];
-            
-            return finalWords[Math.floor(Math.random() * finalWords.length)];
+            // Fallback to campy archetype-specific final words
+            return generateCampyDialogue(victim, 'death');
         }
 
 
@@ -2924,15 +3845,15 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 return relationshipMoments[relationshipType];
             }
             
-            // Fallback to original general moments
+            // Fallback to campy dialogue moments
             return [
                 {
                     event: `${char1.name} and ${char2.name} try to process the situation.`,
                     dialogue: [
-                        `"So on a scale of 1 to 10, how screwed are we?" - ${char1.name}`,
-                        `"I'd say we're hovering around a solid 8. Bad, but not unwatchable." - ${char2.name}`,
-                        `"Great. I always wanted to be in a horror movie. Just not as a victim." - ${char1.name}`,
-                        `"Look on the bright side - if we survive, we'll have the best college essay topic ever." - ${char2.name}`
+                        generateCampyDialogue(char1, 'terrified'),
+                        generateCampyDialogue(char2, 'terrified'),
+                        generateCampyDialogue(char1, 'suspicious'),
+                        generateCampyDialogue(char2, 'death')
                     ]
                 }
             ];
@@ -2972,7 +3893,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             ];
             
             addEvent('event', tensionMoments[Math.floor(Math.random() * tensionMoments.length)]);
-            addEvent('dialogue', tensionDialogue[Math.floor(Math.random() * tensionDialogue.length)]);
+            addEvent('dialogue', generateCampyDialogue(character, 'terrified'));
         }
 
 
@@ -3120,7 +4041,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             ];
             
             addEvent('event', scares[Math.floor(Math.random() * scares.length)]);
-            addEvent('dialogue', scareDialogue[Math.floor(Math.random() * scareDialogue.length)]);
+            addEvent('dialogue', generateCampyDialogue(character, 'terrified'));
         }
 
 
@@ -3152,7 +4073,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             ];
             
             addEvent('narrative', moments[Math.floor(Math.random() * moments.length)]);
-            addEvent('dialogue', quietDialogue[Math.floor(Math.random() * quietDialogue.length)]);
+            addEvent('dialogue', generateCampyDialogue(character, 'terrified'));
         }
 
 
@@ -3272,7 +4193,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 `"That was more cardio than I've done all year!" - ${victim.name}, out of breath.`
             ];
             
-            addEvent('dialogue', survivorLines[Math.floor(Math.random() * survivorLines.length)]);
+            addEvent('dialogue', generateCampyDialogue(victim, 'attack'));
             
             attackCharacter(victim, gameState.currentAct);
         }
@@ -3594,6 +4515,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 // Killer wins
                 addEvent('reveal', '💀 THE KILLER WINS! No survivors remain...');
                 addEvent('title', '🎬 THE END 🎬');
+                gameState.movieComplete = true;
                 generateEdgicRatings(3);
                 return;
             }
@@ -3638,7 +4560,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                     `"Remember me... as I lived... not how I died..." - ${victim.name}, smiling weakly`
                 ];
                 
-                addEvent('dialogue', finalWords[Math.floor(Math.random() * finalWords.length)]);
+                addEvent('dialogue', generateCampyDialogue(victim, 'death'));
                 killCharacter(victim, killer, 3);
                 
                 // Add reaction from other survivors
@@ -3651,7 +4573,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                         `"${victim.name}, I won't let you die in vain!" - ${reactor.name}, determined`,
                         `"We have to end this madness NOW!" - ${reactor.name}, rallying the others`
                     ];
-                    addEvent('dialogue', reactions[Math.floor(Math.random() * reactions.length)]);
+                    addEvent('dialogue', generateCampyDialogue(reactor, 'death'));
                 }
                 
                 // Add relationship reactions
@@ -3681,6 +4603,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 // Everyone died - killer wins
                 addEvent('reveal', '💀 THE KILLER WINS! All survivors have fallen in the final battle...');
                 addEvent('title', '🎬 THE END - KILLER VICTORY 🎬');
+                gameState.movieComplete = true;
                 generateEdgicRatings(3);
                 return;
             }
@@ -3717,6 +4640,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             addEvent('event', `${survivor.name} ${method}!`);
             addEvent('dialogue', `"It's over..." - ${survivor.name}, breathing heavily`);
             addEvent('title', '🎬 THE END 🎬');
+            gameState.movieComplete = true;
             
             // Kill the killers
             gameState.killers.forEach(killer => {
