@@ -804,6 +804,26 @@
 </select>
 </div>
 <div class="form-group">
+<label for="movie-setting">Movie Setting</label>
+<select id="movie-setting" onchange="toggleCustomSetting()">
+<option value="random">Random Setting</option>
+<option value="crimson-falls">Crimson Falls - isolated mountain town where autumn mist clings to abandoned cabins</option>
+<option value="willowbrook">Willowbrook - forgotten lakeside community where dark waters hold deadly secrets</option>
+<option value="ravenshollow">Ravenshollow - remote college town where ivy-covered halls echo with screams</option>
+<option value="cedar-ridge">Cedar Ridge - snowbound village where winter winds carry whispers of murder</option>
+<option value="driftwood-bay">Driftwood Bay - sleepy coastal town where lighthouse beams reveal unspeakable horrors</option>
+<option value="harvest-moon">Harvest Moon - agricultural settlement where cornfields hide more than just crops</option>
+<option value="shadowbrook">Shadowbrook - abandoned mining town where old tunnels conceal fresh graves</option>
+<option value="custom">Custom Setting...</option>
+</select>
+</div>
+<div class="form-group hidden" id="custom-setting-fields">
+<label for="custom-location">Custom Location Name</label>
+<input id="custom-location" placeholder="e.g., Blackwood Manor, Devil's Lake, Pine Ridge Academy..." type="text"/>
+<label for="custom-atmosphere" style="margin-top: 10px;">Atmospheric Description</label>
+<input id="custom-atmosphere" placeholder="e.g., where ancient trees whisper dark secrets..." type="text"/>
+</div>
+<div class="form-group">
 <label for="killer-count">Number of Killers</label>
 <select id="killer-count">
 <option value="random">Random (1-3)</option>
@@ -975,6 +995,7 @@
             currentAct: 1,
             movieTitle: '',
             movieYear: new Date().getFullYear(),
+            movieSetting: 'random',
             events: [],
             isKillerMode: false,
             killerPlayer: null,
@@ -1067,15 +1088,22 @@
         }
 
 
-        // Character Memory System
+        // Enhanced Character Memory System
         class CharacterMemory {
             constructor(characterId) {
                 this.characterId = characterId;
                 this.experiences = [];
-                this.suspicions = new Map();
+                this.suspicions = new Map(); // suspectId -> { level, reasons, evidence, timestamp }
+                this.trust = new Map(); // characterId -> trust level (0-1)
                 this.emotionalState = 'calm';
                 this.witnessedDeaths = [];
                 this.lastKnownLocation = '';
+                this.clues = []; // { type, description, location, act, timestamp }
+                this.behaviorPattern = 'normal'; // normal, cautious, aggressive, paranoid, broken
+                this.knownFacts = new Set(); // Things they've figured out
+                this.allies = new Set(); // CharacterIds they trust and group with
+                this.traumaLevel = 0; // 0-10 scale of accumulated trauma
+                this.survivalExperience = 0; // Increases survival chances over time
             }
 
             addExperience(event) {
@@ -1091,9 +1119,18 @@
                 const character = gameState.characters.find(c => c.id === this.characterId);
                 if (!character) return;
 
+                // Increase trauma and survival experience
+                this.traumaLevel += this.getTraumaImpact(event);
+                this.survivalExperience += this.getSurvivalLearning(event);
+
+                // Update behavior pattern based on trauma
+                this.updateBehaviorPattern();
+
                 switch(event.type) {
                     case 'death':
                         this.witnessedDeaths.push(event.victim);
+                        this.processDeathEvidence(event);
+                        
                         if (this.witnessedDeaths.length >= 3) {
                             this.emotionalState = 'broken';
                         } else if (event.victim && getRelationship(character, event.victim)) {
@@ -1104,9 +1141,14 @@
                         break;
                     case 'attack':
                         this.emotionalState = 'panicked';
+                        this.processAttackEvidence(event);
                         break;
                     case 'discovery':
                         this.emotionalState = 'suspicious';
+                        this.processDiscoveryEvidence(event);
+                        break;
+                    case 'suspicious_behavior':
+                        this.processSuspiciousBehavior(event);
                         break;
                     case 'safe_moment':
                         if (this.witnessedDeaths.length === 0) {
@@ -1115,6 +1157,156 @@
                             this.emotionalState = 'nervous';
                         }
                         break;
+                }
+            }
+
+            getTraumaImpact(event) {
+                switch(event.type) {
+                    case 'death': return event.isClose ? 2 : 1;
+                    case 'attack': return event.isPersonal ? 1.5 : 0.5;
+                    case 'discovery': return 0.3;
+                    default: return 0.1;
+                }
+            }
+
+            getSurvivalLearning(event) {
+                switch(event.type) {
+                    case 'death': return 1; // Learn from others' deaths
+                    case 'attack': return event.survived ? 2 : 0; // Big learning if survived attack
+                    case 'discovery': return 0.5; // Learn from investigation
+                    default: return 0.1;
+                }
+            }
+
+            updateBehaviorPattern() {
+                if (this.traumaLevel >= 8) {
+                    this.behaviorPattern = 'broken';
+                } else if (this.traumaLevel >= 6) {
+                    this.behaviorPattern = 'paranoid';
+                } else if (this.traumaLevel >= 4) {
+                    this.behaviorPattern = 'cautious';
+                } else if (this.survivalExperience >= 3) {
+                    this.behaviorPattern = 'aggressive';
+                } else {
+                    this.behaviorPattern = 'normal';
+                }
+            }
+
+            processDeathEvidence(event) {
+                if (!event.killer) return;
+                
+                // Add suspicion to the killer
+                this.addSuspicion(event.killer.id, 'witnessed_murder', 0.9, 'I saw them kill someone!');
+                
+                // Add clue about location and method
+                this.clues.push({
+                    type: 'murder_scene',
+                    description: `${event.victim.name} was killed here`,
+                    location: event.location || 'unknown',
+                    act: gameState.currentAct,
+                    timestamp: Date.now()
+                });
+            }
+
+            processAttackEvidence(event) {
+                if (!event.attacker) return;
+                
+                this.addSuspicion(event.attacker.id, 'witnessed_attack', 0.7, 'I saw them attack someone!');
+                
+                // Learn about killer patterns
+                this.knownFacts.add(`killer_uses_${event.method || 'violence'}`);
+            }
+
+            processDiscoveryEvidence(event) {
+                if (event.clue) {
+                    this.clues.push({
+                        type: event.clue.type,
+                        description: event.clue.description,
+                        location: event.location,
+                        act: gameState.currentAct,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+
+            processSuspiciousBehavior(event) {
+                if (!event.suspect) return;
+                
+                this.addSuspicion(event.suspect.id, 'suspicious_behavior', 0.3, event.reason || 'Acting strange');
+            }
+
+            addSuspicion(suspectId, reason, confidence, evidence) {
+                if (!this.suspicions.has(suspectId)) {
+                    this.suspicions.set(suspectId, {
+                        level: 0,
+                        reasons: [],
+                        evidence: [],
+                        timestamp: Date.now()
+                    });
+                }
+                
+                const suspicion = this.suspicions.get(suspectId);
+                suspicion.reasons.push(reason);
+                suspicion.evidence.push(evidence);
+                suspicion.level = Math.min(1.0, suspicion.level + confidence);
+                suspicion.timestamp = Date.now();
+            }
+
+            getSuspicionLevel(suspectId) {
+                const suspicion = this.suspicions.get(suspectId);
+                return suspicion ? suspicion.level : 0;
+            }
+
+            getMostSuspected() {
+                let maxSuspicion = 0;
+                let mostSuspected = null;
+                
+                this.suspicions.forEach((data, suspectId) => {
+                    if (data.level > maxSuspicion) {
+                        maxSuspicion = data.level;
+                        mostSuspected = suspectId;
+                    }
+                });
+                
+                return mostSuspected ? { id: mostSuspected, level: maxSuspicion } : null;
+            }
+
+            updateTrust(characterId, change) {
+                const currentTrust = this.trust.get(characterId) || 0.5;
+                const newTrust = Math.max(0, Math.min(1, currentTrust + change));
+                this.trust.set(characterId, newTrust);
+                
+                // Update allies based on trust
+                if (newTrust >= 0.7) {
+                    this.allies.add(characterId);
+                } else if (newTrust <= 0.3) {
+                    this.allies.delete(characterId);
+                }
+            }
+
+            getTrustLevel(characterId) {
+                return this.trust.get(characterId) || 0.5;
+            }
+
+            shareCluesWith(otherCharacter) {
+                // Share some clues with trusted allies
+                if (this.getTrustLevel(otherCharacter.id) >= 0.7) {
+                    return this.clues.slice(-2); // Share last 2 clues
+                }
+                return [];
+            }
+            
+            addClue(clue) {
+                // Add a clue to this character's memory
+                this.clues.push({
+                    ...clue,
+                    timestamp: clue.timestamp || Date.now(),
+                    act: clue.act || gameState.currentAct
+                });
+                
+                // Limit to last 10 clues to prevent memory bloat
+                if (this.clues.length > 10) {
+                    this.clues = this.clues.slice(-10);
                 }
             }
         }
@@ -1128,28 +1320,56 @@
                     "That's it! We're getting out of here RIGHT NOW!",
                     "I'm not losing anyone else tonight!",
                     "Why does this always happen to us?!",
-                    "We need to stick together - it's our only chance!"
+                    "We need to stick together - it's our only chance!",
+                    "I'm going to find this killer and end this nightmare!",
+                    "They picked the wrong group to terrorize!",
+                    "Everyone who's died tonight... their deaths won't be in vain!",
+                    "I swear on my life, I'll get us out of here alive!",
+                    "This psycho just made the biggest mistake of their life!",
+                    "I've watched enough horror movies to know how this ends!",
+                    "No more running. No more hiding. Time to fight back!",
+                    "They want to play games? Let's play!"
                 ],
                 attack_reactions: [
                     "Get away from them, you psycho!",
                     "Not on my watch!",
                     "I'll fight you to the death!",
                     "You picked the wrong girl to mess with!",
-                    "This stops here and now!"
+                    "This stops here and now!",
+                    "Touch them and you're dead!",
+                    "Over my dead body!",
+                    "I've had enough of your sick games!",
+                    "You want a fight? You got one!",
+                    "I'm done being scared of you!",
+                    "Time to show you what real strength looks like!",
+                    "You messed with the wrong survivor!"
                 ],
                 suspicious_moments: [
                     "Something's not right about you...",
                     "I've got my eye on you.",
                     "Don't think I haven't noticed your behavior.",
                     "You're hiding something, aren't you?",
-                    "I don't trust you as far as I can throw you."
+                    "I don't trust you as far as I can throw you.",
+                    "Your story doesn't add up.",
+                    "Why are you always conveniently absent when things happen?",
+                    "I'm watching you very carefully from now on.",
+                    "You're acting way too calm for someone who should be terrified.",
+                    "Something about your alibis keeps bothering me.",
+                    "You know more than you're letting on, don't you?"
                 ],
                 terrified: [
                     "This is like a nightmare I can't wake up from!",
                     "How is this real?! How is any of this REAL?!",
                     "I just want to go home... I just want this to be over!",
                     "Please tell me this is some sick joke!",
-                    "I can't... I can't handle much more of this..."
+                    "I can't... I can't handle much more of this...",
+                    "Every shadow could be hiding death itself!",
+                    "I keep thinking I hear footsteps behind me!",
+                    "What if we never make it out of here alive?",
+                    "My heart won't stop pounding in my chest!",
+                    "I feel like I'm losing my mind!",
+                    "Every sound makes me jump out of my skin!",
+                    "This house feels like a death trap!"
                 ]
             },
             'The Flirt': {
@@ -1745,6 +1965,14 @@
 
         // Enhanced dialogue generation
         function generateCampyDialogue(character, situation, context = {}) {
+            // Check for returning survivor special dialogue
+            if (character.isReturning && character.legacyMemory) {
+                const legacyDialogue = generateLegacyDialogue(character, situation);
+                if (legacyDialogue) {
+                    return legacyDialogue;
+                }
+            }
+            
             const archetype = character.archetype.name;
             const dialogueSet = campyHorrorDialogue[archetype];
             
@@ -1786,6 +2014,54 @@
             }
 
             return `"${selectedDialogue}" - ${character.name}`;
+        }
+        
+        function generateLegacyDialogue(character, situation) {
+            const legacy = character.legacyMemory;
+            const movieCount = legacy.previousMovieCount;
+            
+            // 40% chance to use legacy dialogue for returning survivors
+            if (Math.random() > 0.4) return null;
+            
+            const legacyDialogueSet = {
+                death: [
+                    `"Not again... please not again! I can't go through this a second time!"`,
+                    `"This is exactly how it started last time... we need to get out NOW!"`,
+                    `"I survived ${movieCount} horror movie${movieCount > 1 ? 's' : ''} and I'll survive this one too!"`,
+                    `"I know how this ends. We need to be smarter this time."`,
+                    `"The nightmares were just starting to fade... now they're back."`,
+                    `"I should have known this wasn't over. It's never over."`,
+                    `"Last time I lost everyone I cared about. I won't let that happen again!"`
+                ],
+                attack: [
+                    `"I've been through this before! You picked the wrong survivor!"`,
+                    `"I know all your tricks! I survived worse than you!"`,
+                    `"This is like a sick déjà vu! But I'm ready this time!"`,
+                    `"I didn't survive last time to die here!"`,
+                    `"You want to mess with a veteran survivor? Bring it on!"`
+                ],
+                suspicious: [
+                    `"I've seen this behavior before... you're the killer, aren't you?"`,
+                    `"My PTSD might be bad, but my killer instincts are sharp."`,
+                    `"Last movie taught me to trust my gut... and my gut says you're dangerous."`,
+                    `"I know what a killer looks like. I've stared one in the face before."`,
+                    `"The pattern is the same as last time. You're not fooling me."`
+                ],
+                terrified: [
+                    `"The flashbacks are getting worse... this is exactly like before!"`,
+                    `"I thought the therapy was working... but here we are again!"`,
+                    `"How many times do I have to live through this nightmare?!"`,
+                    `"I can't tell what's real and what's a flashback anymore!"`,
+                    `"They said I was safe now... they LIED to me!"`,
+                    `"My therapist didn't prepare me for a sequel!"`,
+                    `"I barely made it out alive last time... what are my odds now?"`
+                ]
+            };
+            
+            const dialogueArray = legacyDialogueSet[situation] || legacyDialogueSet.terrified;
+            const selectedDialogue = dialogueArray[Math.floor(Math.random() * dialogueArray.length)];
+            
+            return `${selectedDialogue} - ${character.name}, haunted by the past`;
         }
 
         function modifyDialogueForRelationship(dialogue, relationship, speaker, target, speakerName) {
@@ -2236,6 +2512,17 @@
 
 
         // Setup functions
+        function toggleCustomSetting() {
+            const settingSelect = document.getElementById('movie-setting');
+            const customFields = document.getElementById('custom-setting-fields');
+            
+            if (settingSelect.value === 'custom') {
+                customFields.classList.remove('hidden');
+            } else {
+                customFields.classList.add('hidden');
+            }
+        }
+        
         function setupCast() {
             try {
                 console.log('setupCast function called');
@@ -2244,12 +2531,32 @@
                 const gameMode = document.getElementById('game-mode').value;
                 const movieTitle = document.getElementById('movie-title').value || 'Untitled Horror';
                 const movieYear = parseInt(document.getElementById('movie-year').value) || new Date().getFullYear();
+                const movieSetting = document.getElementById('movie-setting').value;
                 
-                console.log('Values:', { castSize, gameMode, movieTitle, movieYear });
+                // Handle custom setting
+                let finalSetting = movieSetting;
+                if (movieSetting === 'custom') {
+                    const customLocation = document.getElementById('custom-location').value;
+                    const customAtmosphere = document.getElementById('custom-atmosphere').value;
+                    
+                    if (!customLocation.trim()) {
+                        alert('Please enter a custom location name.');
+                        return;
+                    }
+                    
+                    finalSetting = {
+                        type: 'custom',
+                        location: customLocation.trim(),
+                        atmosphere: customAtmosphere.trim() || 'where dark secrets lurk in every shadow'
+                    };
+                }
+                
+                console.log('Values:', { castSize, gameMode, movieTitle, movieYear, movieSetting: finalSetting });
                 
                 gameState.gameMode = gameMode;
                 gameState.movieTitle = movieTitle;
                 gameState.movieYear = movieYear;
+                gameState.movieSetting = finalSetting;
                 gameState.isKillerMode = gameMode === 'killer';
                 
                 // Generate characters
@@ -2285,11 +2592,14 @@
                         actStatuses: { 1: 'Alive', 2: 'Alive', 3: 'Alive' },
                         killedBy: null,
                         deathAct: null,
-                        survivalChance: calculateSurvivalChance(archetype.stats),
+                        survivalChance: 0, // Will be calculated after memory is added
                         edgic: { 1: 'UTR1', 2: 'UTR1', 3: 'UTR1' },
                         isReturning: false,
                         memory: new CharacterMemory(i)
                     };
+                    
+                    // Calculate survival chance with memory system
+                    character.survivalChance = calculateSurvivalChance(character.stats, character);
                     
                     gameState.characters.push(character);
                 }
@@ -2327,9 +2637,599 @@
         }
 
 
-        function calculateSurvivalChance(stats) {
+        function calculateSurvivalChance(stats, character = null) {
             const total = stats.survival * 2 + stats.intelligence + stats.athletics + stats.stealth + stats.luck;
-            return Math.min(90, Math.max(5, total * 1.2));
+            let baseChance = Math.min(90, Math.max(5, total * 1.2));
+            
+            // Apply memory-based modifications if character has memory
+            if (character && character.memory) {
+                baseChance += getMemoryBasedSurvivalBonus(character);
+            }
+            
+            return Math.min(95, Math.max(5, baseChance));
+        }
+
+        function getMemoryBasedSurvivalBonus(character) {
+            const memory = character.memory;
+            let bonus = 0;
+            
+            // Experience bonus (more deaths witnessed = more careful)
+            bonus += Math.min(10, memory.survivalExperience * 2);
+            
+            // Behavior pattern modifiers
+            switch(memory.behaviorPattern) {
+                case 'cautious': bonus += 5; break;
+                case 'aggressive': bonus += 3; break;
+                case 'paranoid': bonus += 8; break;
+                case 'broken': bonus -= 10; break;
+                default: bonus += 0;
+            }
+            
+            // Trust network bonus (allies help survival)
+            bonus += Math.min(5, memory.allies.size * 2);
+            
+            // Trauma penalty (too much trauma hurts decision making)
+            bonus -= Math.min(8, memory.traumaLevel);
+            
+            // Knowledge bonus (knowing killer patterns helps)
+            bonus += Math.min(3, memory.knownFacts.size);
+            
+            return bonus;
+        }
+
+        // Investigation and Group Dynamics System
+        function generateInvestigationEvent() {
+            if (gameState.movieComplete) return;
+            
+            const aliveCharacters = gameState.characters.filter(c => 
+                c.status === 'Alive' && !gameState.killers.includes(c)
+            );
+            if (aliveCharacters.length < 2) return;
+
+            // Pick investigators based on intelligence and behavior pattern
+            let investigators = aliveCharacters
+                .filter(c => c.stats.intelligence >= 6 || c.memory.behaviorPattern === 'aggressive')
+                .slice(0, 2);
+            
+            // If no intelligent/aggressive characters, just pick any two alive characters
+            if (investigators.length === 0) {
+                investigators = aliveCharacters.slice(0, 2);
+            }
+            
+            if (investigators.length === 0) return;
+
+            // Always generate an investigation event to ensure visibility
+            addEvent('investigation-start', `🧩 INVESTIGATION: ${investigators.map(i => i.name).join(' and ')} begin investigating the murders...`);
+            
+            const investigationType = Math.random();
+            
+            if (investigationType < 0.2) {
+                generateSuspicionAccusation(investigators);
+            } else if (investigationType < 0.4) {
+                generateClueDiscussion(investigators);
+            } else if (investigationType < 0.6) {
+                generateGroupTheory(investigators);
+            } else if (investigationType < 0.75) {
+                generateEvidenceAnalysis(investigators);
+            } else if (investigationType < 0.9) {
+                generateWitnessInterview(investigators);
+            } else {
+                generateConspiracyTheory(investigators);
+            }
+        }
+
+        function generateSuspicionAccusation(investigators) {
+            const accuser = investigators[0];
+            const mostSuspected = accuser.memory.getMostSuspected();
+            
+            if (!mostSuspected || mostSuspected.level < 0.5) return;
+            
+            const suspect = gameState.characters.find(c => c.id == mostSuspected.id);
+            if (!suspect || suspect.status !== 'Alive') return;
+
+            const isKillerAccused = gameState.killers.includes(suspect);
+            const suspicionData = accuser.memory.suspicions.get(mostSuspected.id);
+            
+            addEvent('event', `🔍 ACCUSATION: ${accuser.name} confronts ${suspect.name} with their suspicions`);
+            
+            // Accuser's statement
+            const evidence = suspicionData.evidence[0] || 'suspicious behavior';
+            addEvent('dialogue', generateAccusationDialogue(accuser, suspect, evidence));
+            
+            // Suspect's response
+            setTimeout(() => {
+                addEvent('dialogue', generateDefenseDialogue(suspect, accuser, isKillerAccused));
+                
+                // Update group dynamics based on accusation
+                updateGroupDynamicsAfterAccusation(accuser, suspect, isKillerAccused);
+            }, 1000);
+        }
+
+        function generateAccusationDialogue(accuser, suspect, evidence) {
+            const accuserArchetype = accuser.archetype.name;
+            const suspectName = suspect.name;
+            
+            const accusations = {
+                'The Nerd': [
+                    `"My analysis clearly shows ${suspectName} is the killer! The evidence is undeniable!"`,
+                    `"According to my calculations, ${suspectName} has been present at every murder scene!"`,
+                    `"The data doesn't lie - ${suspectName} is our killer!"`
+                ],
+                'The Final Girl': [
+                    `"I've been watching you, ${suspectName}. You're the killer, aren't you?!"`,
+                    `"${suspectName}, I know it's you! Stop this madness now!"`,
+                    `"Everyone needs to hear this - ${suspectName} is the one killing us!"`
+                ],
+                'The Reporter': [
+                    `"I've been investigating, and all the evidence points to ${suspectName}!"`,
+                    `"${suspectName}, care to explain why you're always conveniently absent during murders?"`,
+                    `"The truth is out, ${suspectName} - you're our killer!"`
+                ],
+                'default': [
+                    `"It's ${suspectName}! They're the killer! I saw ${evidence}!"`,
+                    `"${suspectName} has been acting suspicious all night!"`,
+                    `"Everyone needs to know - ${suspectName} is trying to kill us all!"`
+                ]
+            };
+            
+            const dialogueSet = accusations[accuserArchetype] || accusations.default;
+            const dialogue = dialogueSet[Math.floor(Math.random() * dialogueSet.length)];
+            
+            return `"${dialogue}" - ${accuser.name}, pointing accusingly`;
+        }
+
+        function generateDefenseDialogue(suspect, accuser, isActualKiller) {
+            const suspectArchetype = suspect.archetype.name;
+            const accuserName = accuser.name;
+            
+            if (isActualKiller) {
+                // Killer trying to deflect
+                const killerDefenses = [
+                    `"You're crazy, ${accuserName}! Why would I hurt anyone?"`,
+                    `"That's ridiculous! You're just trying to distract from your own guilt!"`,
+                    `"${accuserName}, you're losing it. I'm trying to help everyone here!"`,
+                    `"This is insane! I would never... why would you even think that?"`
+                ];
+                return `"${killerDefenses[Math.floor(Math.random() * killerDefenses.length)]}" - ${suspect.name}, looking nervous`;
+            } else {
+                // Innocent person defending themselves
+                const innocentDefenses = {
+                    'The Innocent': [
+                        `"I would never hurt anyone! How could you even think that, ${accuserName}?"`,
+                        `"This is horrible! I'm just trying to survive like everyone else!"`,
+                        `"Please believe me - I'm not a killer! I'm just scared!"`
+                    ],
+                    'The Coward': [
+                        `"Are you insane?! I can barely hurt a fly! I'm too scared to be a killer!"`,
+                        `"${accuserName}, you've lost your mind! I've been hiding this whole time!"`,
+                        `"I'm way too much of a coward to kill anyone!"`
+                    ],
+                    'The Drama Queen': [
+                        `"HOW DARE YOU accuse me, ${accuserName}! This is the WORST betrayal!"`,
+                        `"I am INNOCENT! This is like being falsely accused in a bad soap opera!"`,
+                        `"${accuserName}, you're RUINING my reputation with these accusations!"`
+                    ],
+                    'default': [
+                        `"That's not true, ${accuserName}! I'm innocent!"`,
+                        `"You're wrong about me! I would never kill anyone!"`,
+                        `"${accuserName}, you're making a terrible mistake!"`
+                    ]
+                };
+                
+                const dialogueSet = innocentDefenses[suspectArchetype] || innocentDefenses.default;
+                const dialogue = dialogueSet[Math.floor(Math.random() * dialogueSet.length)];
+                
+                return `"${dialogue}" - ${suspect.name}, shocked and defensive`;
+            }
+        }
+
+        function updateGroupDynamicsAfterAccusation(accuser, suspect, isKillerAccused) {
+            const aliveCharacters = gameState.characters.filter(c => 
+                c.status === 'Alive' && !gameState.killers.includes(c)
+            );
+            
+            aliveCharacters.forEach(character => {
+                if (character.id === accuser.id || character.id === suspect.id) return;
+                
+                // Characters react based on their intelligence and relationship to both parties
+                const trustInAccuser = character.memory.getTrustLevel(accuser.id);
+                const trustInSuspect = character.memory.getTrustLevel(suspect.id);
+                
+                if (isKillerAccused) {
+                    // Correct accusation - increase trust in accuser, decrease trust in suspect
+                    character.memory.updateTrust(accuser.id, 0.2);
+                    character.memory.updateTrust(suspect.id, -0.4);
+                    character.memory.addSuspicion(suspect.id, 'accused_by_trusted_source', 0.6, `${accuser.name} accused them`);
+                } else {
+                    // Wrong accusation - might hurt accuser's credibility
+                    if (trustInSuspect > 0.6) {
+                        character.memory.updateTrust(accuser.id, -0.1);
+                    }
+                }
+                
+                // Add this as an experience
+                character.memory.addExperience({
+                    type: 'accusation_witnessed',
+                    accuser: accuser,
+                    suspect: suspect,
+                    isCorrect: isKillerAccused
+                });
+            });
+        }
+
+        function generateClueDiscussion(investigators) {
+            if (investigators.length < 2) return;
+            
+            const char1 = investigators[0];
+            const char2 = investigators[1];
+            
+            // Share clues between investigators
+            const clues1 = char1.memory.shareCluesWith(char2);
+            const clues2 = char2.memory.shareCluesWith(char1);
+            
+            if (clues1.length === 0 && clues2.length === 0) return;
+            
+            addEvent('event', `🧩 INVESTIGATION: ${char1.name} and ${char2.name} share what they've discovered`);
+            
+            if (clues1.length > 0) {
+                const clue = clues1[0];
+                addEvent('dialogue', `"I found something important - ${clue.description}!" - ${char1.name}`);
+                
+                // char2 learns this clue
+                char2.memory.clues.push({...clue, learnedFrom: char1.name});
+            }
+            
+            setTimeout(() => {
+                if (clues2.length > 0) {
+                    const clue = clues2[0];
+                    addEvent('dialogue', `"That reminds me - ${clue.description}!" - ${char2.name}`);
+                    
+                    // char1 learns this clue
+                    char1.memory.clues.push({...clue, learnedFrom: char2.name});
+                }
+                
+                // Increase trust between investigators
+                char1.memory.updateTrust(char2.id, 0.1);
+                char2.memory.updateTrust(char1.id, 0.1);
+            }, 800);
+        }
+
+        function generateGroupTheory(investigators) {
+            const theorist = investigators[0];
+            const mostSuspected = theorist.memory.getMostSuspected();
+            
+            addEvent('event', `💭 THEORY: ${theorist.name} shares their thoughts about the killer`);
+            
+            if (mostSuspected && mostSuspected.level > 0.4) {
+                const suspect = gameState.characters.find(c => c.id == mostSuspected.id);
+                if (suspect) {
+                    addEvent('dialogue', generateTheoryDialogue(theorist, suspect));
+                }
+            } else {
+                addEvent('dialogue', generateGeneralTheoryDialogue(theorist));
+            }
+        }
+
+        function generateTheoryDialogue(theorist, suspect) {
+            const theories = [
+                `"I think ${suspect.name} might be our killer. They've been acting strange..."`,
+                `"Has anyone else noticed ${suspect.name}'s behavior? Something's not right."`,
+                `"We need to watch ${suspect.name} carefully. I don't trust them."`,
+                `"My gut tells me ${suspect.name} is hiding something from us."`
+            ];
+            
+            return `"${theories[Math.floor(Math.random() * theories.length)]}" - ${theorist.name}, thoughtfully`;
+        }
+
+        function generateGeneralTheoryDialogue(theorist) {
+            const theories = [
+                `"The killer has to be someone we know. Someone close to us."`,
+                `"I think the killer is trying to pick us off one by one."`,
+                `"We need to figure out the killer's pattern before it's too late."`,
+                `"The killer is smart - they're making this look random but it's not."`
+            ];
+            
+            return `"${theories[Math.floor(Math.random() * theories.length)]}" - ${theorist.name}, analyzing`;
+        }
+        
+        function generateEvidenceAnalysis(investigators) {
+            const investigator = investigators[0];
+            
+            addEvent('event', `🔬 EVIDENCE ANALYSIS: ${investigator.name} examines the crime scene for clues`);
+            
+            const analysisFindings = [
+                "I found blood spatter patterns that suggest the killer is left-handed.",
+                "These footprints are size 10... and they're fresh.",
+                "The killer used a blade approximately 6 inches long - probably a kitchen knife.",
+                "There are defensive wounds here. The victim fought back hard.",
+                "This isn't random - the killer knew exactly where to strike.",
+                "I found fibers that don't match any of our clothing.",
+                "The killer cleaned up... but they missed this bloodstain.",
+                "Based on the entry angle, the killer is approximately 5'8\" tall.",
+                "These cuts are precise. Our killer has medical knowledge.",
+                "The victim was moved after death - this isn't where they died."
+            ];
+            
+            const finding = analysisFindings[Math.floor(Math.random() * analysisFindings.length)];
+            addEvent('dialogue', `"${finding}" - ${investigator.name}, analytical`);
+            
+            // Add the evidence to investigator's memory
+            investigator.memory.addClue({
+                type: 'forensic_evidence',
+                description: finding,
+                location: 'crime scene',
+                act: gameState.currentAct,
+                timestamp: Date.now()
+            });
+        }
+        
+        function generateWitnessInterview(investigators) {
+            const interviewer = investigators[0];
+            const witness = investigators[1] || investigators[0];
+            
+            addEvent('event', `👁️ WITNESS INTERVIEW: ${interviewer.name} questions ${witness.name} about what they saw`);
+            
+            const witnessStatements = [
+                "I heard strange noises coming from upstairs around midnight.",
+                "Someone was definitely moving around in the kitchen when we were all supposed to be asleep.",
+                "I saw a shadow pass by the window, but when I looked again, nothing was there.",
+                "The killer was wearing all black - I couldn't see their face.",
+                "I heard them whispering to themselves... it was really creepy.",
+                "They knew exactly where to find us. Like they'd been watching.",
+                "I smelled cologne... or perfume. Something floral.",
+                "They moved so quietly, like they've done this before.",
+                "I saw them washing something in the sink afterwards.",
+                "There was something familiar about the way they walked..."
+            ];
+            
+            const statement = witnessStatements[Math.floor(Math.random() * witnessStatements.length)];
+            addEvent('dialogue', `"${statement}" - ${witness.name}, recalling details`);
+            
+            // Interviewer responds
+            setTimeout(() => {
+                const responses = [
+                    "That's important information. Can you remember anything else?",
+                    "We need to tell the others about this immediately.",
+                    "This could help us identify the killer.",
+                    "Are you absolutely sure about what you saw?",
+                    "That detail might be the key to solving this."
+                ];
+                const response = responses[Math.floor(Math.random() * responses.length)];
+                addEvent('dialogue', `"${response}" - ${interviewer.name}, focused`);
+            }, 1000);
+        }
+        
+        function generateConspiracyTheory(investigators) {
+            const theorist = investigators[0];
+            
+            addEvent('event', `🕵️ CONSPIRACY THEORY: ${theorist.name} presents a wild theory about what's really happening`);
+            
+            const conspiracies = [
+                "What if this is all an elaborate game show and we're being filmed?",
+                "Maybe we're dealing with more than one killer... a whole network!",
+                "This could be connected to that unsolved murder from five years ago.",
+                "What if one of us isn't who they claim to be?",
+                "I think we're being tested... but by who? And why?",
+                "This house has a dark history. Maybe we're dealing with something supernatural.",
+                "What if the killer is someone we thought was already dead?",
+                "This feels like psychological warfare. Someone's messing with our minds.",
+                "Maybe we were all chosen for a reason. We must have something in common.",
+                "What if this is revenge for something we don't even remember doing?"
+            ];
+            
+            const theory = conspiracies[Math.floor(Math.random() * conspiracies.length)];
+            addEvent('dialogue', `"${theory}" - ${theorist.name}, conspiracy theorist`);
+            
+            // Other investigator reacts
+            if (investigators[1]) {
+                setTimeout(() => {
+                    const reactions = [
+                        "That's... actually not as crazy as it sounds.",
+                        "You've been watching too many horror movies.",
+                        "But what if you're right? That's terrifying.",
+                        "I hate to say it, but that makes sense.",
+                        "Now you're just trying to freak me out more."
+                    ];
+                    const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+                    addEvent('dialogue', `"${reaction}" - ${investigators[1].name}, skeptical`);
+                }, 1200);
+            }
+        }
+
+        function updateGroupDynamicsAfterDeath(witness, victim) {
+            const aliveCharacters = gameState.characters.filter(c => 
+                c.status === 'Alive' && !gameState.killers.includes(c) && c.id !== witness.id
+            );
+            
+            // Death traumatizes everyone - general trust decreases
+            aliveCharacters.forEach(character => {
+                character.memory.updateTrust(witness.id, -0.05); // Slight trust decrease
+                witness.memory.updateTrust(character.id, -0.05);
+                
+                // Increase trauma levels
+                character.memory.traumaLevel += 0.1;
+                witness.memory.traumaLevel += 0.2; // Witnesses are more traumatized
+                
+                // Update behavior patterns based on trauma
+                updateBehaviorPattern(character);
+                updateBehaviorPattern(witness);
+            });
+            
+            // Close relationships with victim create stronger trauma and suspicion
+            const victimRelationships = getCharacterRelationships(victim);
+            victimRelationships.forEach(rel => {
+                if (rel.character.status === 'Alive' && !gameState.killers.includes(rel.character)) {
+                    rel.character.memory.traumaLevel += 0.3;
+                    
+                    // Close friends/family become more suspicious of everyone
+                    if (rel.relationship.type === relationshipTypes.ROMANTIC || 
+                        rel.relationship.type === relationshipTypes.FAMILY ||
+                        rel.relationship.type === relationshipTypes.BEST_FRIENDS) {
+                        
+                        aliveCharacters.forEach(suspectChar => {
+                            if (suspectChar.id !== rel.character.id) {
+                                rel.character.memory.addSuspicion(
+                                    suspectChar.id, 
+                                    'emotional_response', 
+                                    0.1, 
+                                    `Lost ${victim.name}, being cautious of everyone`
+                                );
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        function updateBehaviorPattern(character) {
+            const trauma = character.memory.traumaLevel;
+            const oldPattern = character.memory.behaviorPattern;
+            
+            if (trauma > 0.8) {
+                character.memory.behaviorPattern = 'broken';
+            } else if (trauma > 0.6) {
+                character.memory.behaviorPattern = 'paranoid';
+            } else if (trauma > 0.4) {
+                character.memory.behaviorPattern = 'aggressive';
+            } else if (trauma > 0.2) {
+                character.memory.behaviorPattern = 'cautious';
+            } else {
+                character.memory.behaviorPattern = 'normal';
+            }
+            
+            // Trigger character arc event if behavior pattern changed significantly
+            if (oldPattern !== character.memory.behaviorPattern && 
+                character.status === 'Alive' && 
+                !gameState.killers.includes(character)) {
+                generateCharacterArcEvent(character, oldPattern, character.memory.behaviorPattern);
+            }
+        }
+        
+        function generateCharacterArcEvent(character, oldPattern, newPattern) {
+            const arcTransitions = {
+                'normal_to_cautious': [
+                    `${character.name} starts double-checking locks and looking over their shoulder constantly.`,
+                    `${character.name} begins moving more carefully, clearly shaken by recent events.`,
+                    `${character.name} develops a nervous habit of checking their phone for missed calls.`
+                ],
+                'cautious_to_aggressive': [
+                    `${character.name}'s fear transforms into determination. They're done being a victim.`,
+                    `${character.name} starts carrying makeshift weapons and confronting suspicious behavior.`,
+                    `${character.name} becomes more confrontational, no longer willing to ignore red flags.`
+                ],
+                'cautious_to_paranoid': [
+                    `${character.name} starts seeing threats everywhere, jumping at every shadow.`,
+                    `${character.name} begins obsessively watching other characters, documenting their movements.`,
+                    `${character.name} refuses to be alone with anyone, constantly seeking groups for safety.`
+                ],
+                'aggressive_to_broken': [
+                    `${character.name}'s fighting spirit finally crumbles under the weight of trauma.`,
+                    `${character.name} stops trying to fight back, overwhelmed by hopelessness.`,
+                    `${character.name} retreats into themselves, no longer caring about survival.`
+                ],
+                'paranoid_to_broken': [
+                    `${character.name}'s constant vigilance exhausts them into defeat.`,
+                    `${character.name} gives up on trying to identify the killer, accepting their fate.`,
+                    `${character.name} becomes catatonic, unable to process any more horror.`
+                ]
+            };
+            
+            const transitionKey = `${oldPattern}_to_${newPattern}`;
+            const transitions = arcTransitions[transitionKey];
+            
+            if (transitions) {
+                const transition = transitions[Math.floor(Math.random() * transitions.length)];
+                addEvent('character-arc', `🎭 CHARACTER ARC: ${transition}`);
+                
+                // Add archetype-specific dialogue reaction
+                setTimeout(() => {
+                    const dialogue = generateCharacterArcDialogue(character, newPattern);
+                    if (dialogue) {
+                        addEvent('dialogue', dialogue);
+                    }
+                }, 1000);
+            }
+        }
+        
+        function generateCharacterArcDialogue(character, behaviorPattern) {
+            const archetype = character.archetype;
+            
+            const arcDialogue = {
+                'cautious': {
+                    'The Innocent': [
+                        `"I... I don't think I can trust anyone anymore."`,
+                        `"What if the killer is someone we know?"`,
+                        `"I just want to go home and pretend this never happened."`
+                    ],
+                    'The Coward': [
+                        `"This is exactly what I was afraid would happen!"`,
+                        `"I knew something terrible was going to occur!"`,
+                        `"We should have left when we had the chance!"`
+                    ],
+                    'The Hero': [
+                        `"I need to be more careful if I'm going to protect everyone."`,
+                        `"The killer is targeting us systematically. We need a plan."`,
+                        `"I can't save anyone if I'm dead."`
+                    ]
+                },
+                'aggressive': {
+                    'The Hero': [
+                        `"No more running. It's time to fight back!"`,
+                        `"I'm done being hunted. Now I'm the hunter."`,
+                        `"The killer made this personal. Big mistake."`
+                    ],
+                    'The Rebel': [
+                        `"Screw this! I'm not going down without a fight!"`,
+                        `"Time to show this psycho what happens when you mess with us!"`,
+                        `"I've had enough of this horror movie BS!"`
+                    ],
+                    'The Tough Guy': [
+                        `"Alright, killer. You want a piece of me? Come and get it!"`,
+                        `"I've dealt with worse than you in my sleep!"`,
+                        `"Time to end this once and for all!"`
+                    ]
+                },
+                'paranoid': {
+                    'The Intellectual': [
+                        `"I've been analyzing everyone's behavior. The killer has to be among us."`,
+                        `"The statistical probability suggests the murderer is someone close."`,
+                        `"I'm documenting everything. One of these patterns will reveal the truth."`
+                    ],
+                    'The Coward': [
+                        `"Everyone could be the killer! How do we know who to trust?"`,
+                        `"What if there's more than one killer? What if it's all of you?"`,
+                        `"I can't... I can't handle not knowing who's safe!"`
+                    ]
+                },
+                'broken': {
+                    'The Innocent': [
+                        `"I can't... I just can't anymore..."`,
+                        `"What's the point? We're all going to die anyway."`,
+                        `"I never wanted any of this to happen..."`
+                    ],
+                    'The Drama Queen': [
+                        `"This is it. This is how my story ends. Tragic and beautiful."`,
+                        `"I suppose every leading lady must face her final act..."`,
+                        `"At least I'll make a beautiful corpse..."`
+                    ]
+                }
+            };
+            
+            const patternDialogue = arcDialogue[behaviorPattern];
+            if (patternDialogue && patternDialogue[archetype]) {
+                const options = patternDialogue[archetype];
+                return `"${options[Math.floor(Math.random() * options.length)]}" - ${character.name}, ${behaviorPattern}`;
+            }
+            
+            // Fallback generic dialogue
+            const genericDialogue = {
+                'cautious': `"I need to be more careful about who I trust." - ${character.name}`,
+                'aggressive': `"I'm done being afraid. Time to fight back!" - ${character.name}`,
+                'paranoid': `"I don't trust anyone anymore..." - ${character.name}`,
+                'broken': `"What's the point of fighting anymore?" - ${character.name}`
+            };
+            
+            return genericDialogue[behaviorPattern] || null;
         }
 
 
@@ -2665,6 +3565,10 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             gameState.events = [];
             gameState.autoPlay = false;
             gameState.movieComplete = false;
+            
+            // Initialize character memories for the advanced memory system
+            initializeCharacterMemories();
+            
             updateProgress();
             updateMovieControls();
             startAct1();
@@ -2879,9 +3783,39 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 addEvent('dialogue', lastWords);
                 killCharacter(victim, gameState.killerPlayer, gameState.currentAct);
                 
+                // Update killer memory - successful kill
+                updateKillerMemory(victim, true);
+                
                 // Add relationship-specific reactions from survivors
                 setTimeout(() => {
                     addRelationshipReactions(victim, 'death');
+                    
+                    // Update witnesses' memories with evidence
+                    const witnesses = gameState.characters.filter(c => 
+                        c.status === 'Alive' && !gameState.killers.includes(c) && c.id !== victim.id
+                    );
+                    witnesses.forEach(witness => {
+                        witness.memory.addExperience({
+                            type: 'death',
+                            victim: victim,
+                            killer: gameState.killerPlayer,
+                            isClose: getRelationship(witness, victim) ? true : false,
+                            location: 'scene of crime'
+                        });
+                        
+                        // Add evidence clues for witnesses
+                        witness.memory.addClue({
+                            type: 'death_witness',
+                            description: `Witnessed ${victim.name}'s death`,
+                            location: 'crime scene',
+                            act: gameState.currentAct,
+                            timestamp: Date.now()
+                        });
+                        
+                        // Update group dynamics - trust decreases after deaths
+                        updateGroupDynamicsAfterDeath(witness, victim);
+                    });
+                    
                     // Add random character reactions for more variety
                     setTimeout(() => {
                         addRandomCharacterReactions('death', 1);
@@ -3219,7 +4153,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
 
 
         function updateProgress() {
-            const progress = ((gameState.currentAct - 1) / 3) * 100;
+            const progress = (gameState.currentAct / 3) * 100;
             document.getElementById('movie-progress').style.width = progress + '%';
             document.getElementById('current-act-display').textContent = `Act ${gameState.currentAct}`;
         }
@@ -3358,6 +4292,12 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             
             gameState.storyQueue.push({
                 type: 'function',
+                func: () => generateInvestigationEvent(),
+                delay: 2000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
                 func: () => addCharacterMoment(),
                 delay: 2000
             });
@@ -3476,6 +4416,9 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             addEvent('dialogue', finalWords);
             
             killCharacter(victim, killer, gameState.currentAct);
+            
+            // Update killer memory - successful kill
+            updateKillerMemory(victim, true);
             
             // Add relationship reactions
             setTimeout(() => {
@@ -4141,13 +5084,125 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             addEvent('event', discoveries[Math.floor(Math.random() * discoveries.length)]);
         }
 
+        function selectAdaptiveVictim(aliveCharacters) {
+            // Initialize killer memory if not exists
+            if (!gameState.killerMemory) {
+                gameState.killerMemory = {
+                    successfulKills: [],
+                    failedAttempts: [],
+                    suspicionLevels: new Map(),
+                    preferredTargets: new Set(),
+                    adaptationLevel: 0
+                };
+            }
+            
+            const killerMemory = gameState.killerMemory;
+            
+            // Adaptation Strategy 1: Target characters with highest suspicion on killer
+            const suspiciousCharacters = aliveCharacters.filter(char => {
+                if (!char.memory) return false;
+                const suspicion = char.memory.getMostSuspected();
+                return suspicion && gameState.killers.some(killer => killer.id == suspicion.id) && suspicion.level > 0.3;
+            });
+            
+            if (suspiciousCharacters.length > 0 && Math.random() < 0.4) {
+                const target = suspiciousCharacters[Math.floor(Math.random() * suspiciousCharacters.length)];
+                killerMemory.preferredTargets.add(target.id);
+                return target;
+            }
+            
+            // Adaptation Strategy 2: Target isolated characters (learned behavior)
+            const isolatedCharacters = aliveCharacters.filter(char => {
+                const relationships = getCharacterRelationships(char);
+                const aliveRelationships = relationships.filter(rel => rel.character.status === 'Alive');
+                return aliveRelationships.length <= 1;
+            });
+            
+            if (isolatedCharacters.length > 0 && Math.random() < 0.3) {
+                return isolatedCharacters[Math.floor(Math.random() * isolatedCharacters.length)];
+            }
+            
+            // Adaptation Strategy 3: Avoid characters who have survived previous attacks
+            const survivorsToAvoid = aliveCharacters.filter(char => 
+                killerMemory.failedAttempts.some(attempt => attempt.victimId === char.id)
+            );
+            
+            const preferredTargets = aliveCharacters.filter(char => 
+                !survivorsToAvoid.includes(char) || Math.random() < 0.2 // 20% chance to still target survivors
+            );
+            
+            if (preferredTargets.length > 0) {
+                return preferredTargets[Math.floor(Math.random() * preferredTargets.length)];
+            }
+            
+            // Fallback: random selection
+            return aliveCharacters[Math.floor(Math.random() * aliveCharacters.length)];
+        }
+        
+        function updateKillerMemory(victim, success, witness = null) {
+            if (!gameState.killerMemory) {
+                gameState.killerMemory = {
+                    successfulKills: [],
+                    failedAttempts: [],
+                    suspicionLevels: new Map(),
+                    preferredTargets: new Set(),
+                    adaptationLevel: 0
+                };
+            }
+            
+            const killerMemory = gameState.killerMemory;
+            
+            if (success) {
+                killerMemory.successfulKills.push({
+                    victimId: victim.id,
+                    victimArchetype: victim.archetype,
+                    location: 'current_location',
+                    witnessPresent: witness !== null,
+                    act: gameState.currentAct,
+                    timestamp: Date.now()
+                });
+                killerMemory.adaptationLevel += 0.1;
+            } else {
+                killerMemory.failedAttempts.push({
+                    victimId: victim.id,
+                    victimArchetype: victim.archetype,
+                    escapeMethod: 'fought_back',
+                    witnessPresent: witness !== null,
+                    act: gameState.currentAct,
+                    timestamp: Date.now()
+                });
+                killerMemory.adaptationLevel += 0.05; // Learn from failures too
+            }
+            
+            // Killer becomes more strategic over time
+            if (killerMemory.adaptationLevel > 0.5) {
+                generateKillerAdaptationEvent();
+            }
+        }
+        
+        function generateKillerAdaptationEvent() {
+            const adaptationEvents = [
+                "🧠 KILLER EVOLUTION: The killer is learning from their mistakes, becoming more calculated.",
+                "🧠 KILLER EVOLUTION: The killer begins targeting victims more strategically.",
+                "🧠 KILLER EVOLUTION: The killer adapts their hunting patterns based on previous encounters.",
+                "🧠 KILLER EVOLUTION: The killer becomes more aware of who suspects them.",
+                "🧠 KILLER EVOLUTION: The killer starts avoiding witnesses and choosing better moments to strike."
+            ];
+            
+            if (Math.random() < 0.8) { // 80% chance to show adaptation (increased visibility)
+                const event = adaptationEvents[Math.floor(Math.random() * adaptationEvents.length)];
+                addEvent('killer-evolution', event);
+            }
+        }
+
 
         function performRandomAttack() {
-            const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive');
+            const aliveCharacters = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
             if (aliveCharacters.length === 0) return;
             
-            const victim = aliveCharacters[Math.floor(Math.random() * aliveCharacters.length)];
-            const otherCharacters = gameState.characters.filter(c => c.status === 'Alive' && c !== victim);
+            // Killer adaptation: choose victim based on learned patterns
+            const victim = selectAdaptiveVictim(aliveCharacters);
+            const otherCharacters = gameState.characters.filter(c => c.status === 'Alive' && c !== victim && !gameState.killers.includes(c));
             const witness = otherCharacters.length > 0 ? otherCharacters[Math.floor(Math.random() * otherCharacters.length)] : null;
             
             const attackScenarios = [
@@ -4196,6 +5251,9 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             addEvent('dialogue', generateCampyDialogue(victim, 'attack'));
             
             attackCharacter(victim, gameState.currentAct);
+            
+            // Update killer memory - failed attack (victim survived)
+            updateKillerMemory(victim, false, witness);
         }
 
 
@@ -4248,6 +5306,12 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 type: 'function',
                 func: () => addCharacterMoment(),
                 delay: 2000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateInvestigationEvent(),
+                delay: 1800
             });
             
             gameState.storyQueue.push({
@@ -4402,7 +5466,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             gameState.storyQueue = [];
             gameState.currentStoryIndex = 0;
             
-            // Queue up Act 3 events
+            // Queue up Extended Act 3 events
             gameState.storyQueue.push({
                 type: 'title',
                 text: '🎬 ACT 3 - THE FINAL CONFRONTATION 🎬',
@@ -4411,28 +5475,79 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             
             gameState.storyQueue.push({
                 type: 'narrative',
-                text: 'The final survivors face off against the killer in a deadly game of cat and mouse...',
+                text: 'The house falls into an eerie silence. The few remaining survivors huddle together, knowing the end is near...',
                 delay: 2000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateSurvivorReflections(),
+                delay: 3000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateTensionBuildup(),
+                delay: 4000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateSuspenseSequence(),
+                delay: 4000
             });
             
             gameState.storyQueue.push({
                 type: 'function',
                 func: () => revealKiller(),
-                delay: 2000
+                delay: 5000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateKillerBackstory(),
+                delay: 6000   // Wait for reveal speech to complete
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateSurvivorReactions(),
+                delay: 4000   // Wait for backstory
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateChaseSequence(),
+                delay: 4000
             });
             
             gameState.storyQueue.push({
                 type: 'function',
                 func: () => finalConfrontation(),
+                delay: 4000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateFinalBattle(),
+                delay: 4000
+            });
+            
+            gameState.storyQueue.push({
+                type: 'function',
+                func: () => generateEnding(),
                 delay: 3000
             });
             
             gameState.storyQueue.push({
                 type: 'function',
                 func: () => {
-                    gameState.movieComplete = true;
-                    updateMovieControls();
-                    updateStoryStatus();
+                    // Wait a bit longer for all events to finish
+                    setTimeout(() => {
+                        gameState.movieComplete = true;
+                        updateMovieControls();
+                        updateStoryStatus();
+                    }, 3000);
                 },
                 delay: 1000
             });
@@ -4445,20 +5560,100 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 updateStoryStatus();
             }
         }
+        
+        function generateSurvivorReflections() {
+            if (gameState.movieComplete) return;
+            const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            if (survivors.length === 0) return;
+            
+            addEvent('narrative', '💭 The survivors reflect on the nightmare they\'ve endured...');
+            
+            // Show only one reflection to avoid overlap
+            if (survivors.length > 0) {
+                const survivor = survivors[0];
+                const reflections = [
+                    `"I keep thinking about ${gameState.characters.find(c => c.status === 'Dead')?.name || 'everyone we lost'}... they didn't deserve this."`,
+                    `"How did we not see this coming? The signs were all there..."`,
+                    `"I can't stop shaking. Will this nightmare ever end?"`,
+                    `"We have to survive this. For everyone who didn't make it."`,
+                    `"I trusted them... How could I have been so blind?"`
+                ];
+                const reflection = reflections[Math.floor(Math.random() * reflections.length)];
+                addEvent('dialogue', `${reflection} - ${survivor.name}, haunted`);
+            }
+        }
+        
+        function generateTensionBuildup() {
+            const tensionEvents = [
+                '🔇 The house creaks ominously. Every shadow seems to move.',
+                '💨 A cold draft sweeps through the room, though all windows are closed.',
+                '🕯️ The lights flicker and dim, casting eerie shadows on the walls.',
+                '📱 Someone\'s phone buzzes with a text from a dead person\'s number.',
+                '🚪 A door somewhere in the house slams shut on its own.',
+                '👥 The survivors realize someone is missing from their group.',
+                '🔍 Fresh blood is discovered on a doorknob that was just cleaned.',
+                '📺 The TV turns on by itself, showing static that forms disturbing shapes.'
+            ];
+            
+            const event = tensionEvents[Math.floor(Math.random() * tensionEvents.length)];
+            addEvent('tension', event);
+        }
+        
+        function generateSuspenseSequence() {
+            
+            const suspenseEvents = [
+                'Strange footsteps echo through the hallway, getting closer with each step.',
+                'Scratching sounds come from inside the walls, as if something is trying to claw its way out.',
+                'The survivors hear their own voices calling from empty rooms - but none of them are speaking.',
+                'A music box starts playing a childhood lullaby, its melody twisted and haunting.',
+                'Heavy breathing can be heard through the vents, deliberate and menacing.',
+                'Photographs of the survivors appear scattered on the floor, their faces crossed out in red.',
+                'The house\'s security system activates, locking all exits. They are truly trapped.',
+                'A trail of bloody handprints leads from the basement to the survivors\' hiding spot.'
+            ];
+            
+            const event = suspenseEvents[Math.floor(Math.random() * suspenseEvents.length)];
+            addEvent('suspense', `🌑 SUSPENSE: ${event}`);
+        }
+        
 
 
         function revealKiller() {
-            // Killer reveal
+            if (gameState.movieComplete) return;
+            
+            // Debug: Make sure this function is being called
+            console.log("revealKiller() function called");
+            
+            addEvent('narrative', '🎭 THE MOMENT OF TRUTH ARRIVES...');
+            
+            // Make sure we have killers
+            if (!gameState.killers || gameState.killers.length === 0) {
+                addEvent('reveal', '🎭 ERROR: No killer found!');
+                return;
+            }
+            
+            // Immediate reveal to ensure it shows up
             const killerNames = gameState.killers.map(k => k.name).join(' and ');
             addEvent('reveal', `🎭 THE KILLER IS REVEALED: ${killerNames}!`);
             
-            // Generate motive
-            const motives = generateKillerMotive();
-            addEvent('reveal', `💭 MOTIVE: ${motives}`);
+            // Add motive immediately too
+            try {
+                const motives = generateKillerMotive();
+                addEvent('reveal', `💭 MOTIVE: ${motives}`);
+            } catch (error) {
+                addEvent('reveal', `💭 MOTIVE: Pure evil and madness.`);
+            }
             
-            // Killer speech
-            const speech = generateKillerSpeech();
-            addEvent('dialogue', `"${speech}" - ${gameState.killers[0].name}`);
+            // Then add speech with a delay
+            setTimeout(() => {
+                if (gameState.movieComplete) return;
+                try {
+                    const speech = generateKillerSpeech();
+                    addEvent('dialogue', `"${speech}" - ${gameState.killers[0].name}`);
+                } catch (error) {
+                    addEvent('dialogue', `"You will all pay for what you've done!" - ${gameState.killers[0].name}`);
+                }
+            }, 2000);
         }
 
 
@@ -4505,6 +5700,176 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             ];
             
             return speeches[Math.floor(Math.random() * speeches.length)];
+        }
+        
+        function generateKillerBackstory() {
+            const killer = gameState.killers[0];
+            addEvent('narrative', `🎭 KILLER BACKSTORY: The truth about ${killer.name}...`);
+            
+            const backstories = [
+                `${killer.name} was always the outcast, watching from the shadows as others lived the life they could never have.`,
+                `Years of psychological abuse turned ${killer.name} into something twisted and vengeful.`,
+                `${killer.name} was once just like the others, until a traumatic event shattered their sanity forever.`,
+                `The signs were always there - the dead animals, the disturbing artwork, the cold stare. But nobody paid attention.`,
+                `${killer.name} had been planning this for months, studying each victim's routines and weaknesses.`,
+                `What started as harmless fantasies slowly consumed ${killer.name}'s mind until murder became an obsession.`
+            ];
+            
+            const backstory = backstories[Math.floor(Math.random() * backstories.length)];
+            addEvent('backstory', `📖 ${backstory}`);
+            
+            // Add psychological profile
+            setTimeout(() => {
+                const profiles = [
+                    `Psychological Profile: ${killer.name} exhibits classic signs of antisocial personality disorder with psychopathic tendencies.`,
+                    `Expert Analysis: ${killer.name} likely suffered severe childhood trauma, leading to a complete disconnect from empathy.`,
+                    `Criminal Profile: ${killer.name} is an organized killer who planned each murder with meticulous detail.`,
+                    `Psychiatric Evaluation: ${killer.name} shows no remorse and views their victims as objects rather than people.`
+                ];
+                const profile = profiles[Math.floor(Math.random() * profiles.length)];
+                addEvent('analysis', `🧠 ${profile}`);
+            }, 1500);
+        }
+        
+        function generateSurvivorReactions() {
+            if (gameState.movieComplete) return;
+            const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            const killer = gameState.killers[0];
+            
+            addEvent('narrative', '😱 The survivors react to the killer reveal...');
+            
+            // Show only one reaction to avoid overlap
+            if (survivors.length > 0) {
+                const survivor = survivors[0];
+                const reactions = [
+                    `"${killer.name}?! But you were one of us! How could you do this to your friends?!"`,
+                    `"I trusted you... I actually TRUSTED you! You sick monster!"`,
+                    `"All this time... you were right there with us, pretending to be scared!"`,
+                    `"You're insane! You need help! This isn't you!"`,
+                    `"I should have known... there was always something off about you..."`,
+                    `"You killed them... you killed all of them! WHY?!"`,
+                    `"I'm going to make sure you pay for what you've done!"`,
+                    `"How long have you been planning this? How long have you been lying to us?!"`
+                ];
+                
+                const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+                addEvent('dialogue', `${reaction} - ${survivor.name}, shocked and betrayed`);
+            }
+        }
+        
+        function generateChaseSequence() {
+            if (gameState.movieComplete) return;
+            const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            const killer = gameState.killers[0];
+            
+            addEvent('narrative', '🏃‍♂️ THE FINAL CHASE: The survivors scatter as the killer pursues them!');
+            
+            const chaseEvents = [
+                `${killer.name} chases ${survivors[0]?.name || 'a survivor'} through the house, smashing through doors and furniture.`,
+                `The survivors split up - a classic horror movie mistake that plays right into the killer's hands.`,
+                `${killer.name} corners ${survivors[1]?.name || 'a survivor'} in the basement, their screams echoing through the house.`,
+                `A deadly game of cat and mouse unfolds as ${killer.name} systematically hunts down each hiding survivor.`,
+                `The house becomes a death maze as ${killer.name} uses secret passages to appear behind unsuspecting victims.`,
+                `${killer.name} cuts off all escape routes, turning the house into an inescapable trap.`
+            ];
+            
+            // Only show one chase event to avoid overlap
+            const chaseEvent = chaseEvents[Math.floor(Math.random() * chaseEvents.length)];
+            addEvent('chase', `🏃 ${chaseEvent}`);
+        }
+        
+        function generateFinalBattle() {
+            if (gameState.movieComplete) return;
+            const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            const killer = gameState.killers[0];
+            
+            if (survivors.length === 0) return;
+            
+            addEvent('narrative', '⚔️ THE FINAL BATTLE: The last survivors make their stand!');
+            
+            const finalSurvivor = survivors[Math.floor(Math.random() * survivors.length)];
+            
+            const battleEvents = [
+                `${finalSurvivor.name} fights back with desperate fury, using anything they can find as a weapon.`,
+                `The house becomes a battlefield as ${finalSurvivor.name} and ${killer.name} engage in mortal combat.`,
+                `${finalSurvivor.name} discovers ${killer.name}'s weakness and uses it against them in a climactic showdown.`,
+                `In a final act of courage, ${finalSurvivor.name} confronts ${killer.name} to save the other survivors.`,
+                `The battle rages through multiple rooms, both combatants bloody and exhausted but refusing to give up.`
+            ];
+            
+            const battleEvent = battleEvents[Math.floor(Math.random() * battleEvents.length)];
+            addEvent('battle', `⚔️ ${battleEvent}`);
+            
+            // Final battle dialogue
+            setTimeout(() => {
+                const battleDialogue = [
+                    `"This ends NOW! I won't let you hurt anyone else!"`,
+                    `"You want to kill me? Come and try, you psychopath!"`,
+                    `"I'm not going down without a fight!"`,
+                    `"For everyone you murdered, I'm going to make you pay!"`,
+                    `"You picked the wrong person to mess with!"`
+                ];
+                const dialogue = battleDialogue[Math.floor(Math.random() * battleDialogue.length)];
+                addEvent('dialogue', `"${dialogue}" - ${finalSurvivor.name}, defiant`);
+            }, 1000);
+        }
+        
+        function generateEnding() {
+            const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            const victims = gameState.characters.filter(c => c.status === 'Dead' && !gameState.killers.includes(c));
+            const killer = gameState.killers[0];
+            
+            addEvent('narrative', '🎬 THE CLIMACTIC ENDING...');
+            
+            if (survivors.length === 0) {
+                // Killer wins - total victory
+                addEvent('ending', '💀 KILLER VICTORY: The house falls silent. Evil has triumphed completely.');
+                addEvent('dialogue', `"Perfect... absolutely perfect. They never saw it coming." - ${killer.name}, satisfied`);
+                addEvent('title', '🎬 THE END - EVIL WINS 🎬');
+            } else if (survivors.length === 1) {
+                // Final girl/guy ending
+                const finalSurvivor = survivors[0];
+                addEvent('ending', `🏆 FINAL SURVIVOR: ${finalSurvivor.name} emerges as the sole survivor of this nightmare.`);
+                addEvent('dialogue', `"It's over... it's finally over. I survived, but at what cost?" - ${finalSurvivor.name}, traumatized`);
+                addEvent('title', '🎬 THE END - SOLE SURVIVOR 🎬');
+            } else {
+                // Multiple survivors ending
+                addEvent('ending', `✊ SURVIVORS: ${survivors.length} people survived the killing spree, scarred but alive.`);
+                addEvent('dialogue', `"We made it... but we'll never be the same." - ${survivors[0].name}, haunted`);
+                addEvent('title', '🎬 THE END - SURVIVORS 🎬');
+            }
+            
+            // Statistics
+            setTimeout(() => {
+                addEvent('stats', `📊 FINAL STATISTICS:`);
+                addEvent('stats', `💀 Total Deaths: ${victims.length}`);
+                addEvent('stats', `✅ Survivors: ${survivors.length}`);
+                // Fix archetype display - handle both string and object cases
+                const killerArchetype = killer.archetype?.name || killer.archetype || 'Psycho Killer';
+                addEvent('stats', `🔪 Killer: ${killer.name} (${killerArchetype})`);
+                addEvent('stats', `🎬 Movie Rating: ${generateMovieRating(victims.length, survivors.length)}`);
+                
+                if (survivors.length > 0) {
+                    addEvent('stats', `🏆 Survivors: ${survivors.map(s => s.name).join(', ')}`);
+                }
+                
+                // Add weapon used
+                if (killer.preferredWeapon && typeof killer.preferredWeapon === 'string') {
+                    addEvent('stats', `⚔️ Murder Weapon: ${killer.preferredWeapon}`);
+                } else {
+                    const weapons = ['Kitchen Knife', 'Machete', 'Chainsaw', 'Baseball Bat', 'Garden Shears', 'Axe'];
+                    const weapon = weapons[Math.floor(Math.random() * weapons.length)];
+                    addEvent('stats', `⚔️ Murder Weapon: ${weapon}`);
+                }
+            }, 2000);
+        }
+        
+        function generateMovieRating(deaths, survivors) {
+            if (deaths >= 8) return "R-Rated Bloodbath";
+            if (deaths >= 5) return "Violent Thriller";
+            if (deaths >= 3) return "Suspenseful Horror";
+            if (deaths >= 1) return "Mild Horror";
+            return "Psychological Thriller";
         }
 
 
@@ -4976,10 +6341,31 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
 
         function recordMovieInFranchise() {
             // Create movie record
+            // Calculate movie stats
+            const deadCharacters = gameState.characters.filter(c => c.status === 'Dead' && !gameState.killers.includes(c));
+            const survivors = gameState.characters.filter(c => c.status === 'Alive' && !gameState.killers.includes(c));
+            const killerNames = gameState.killers.map(k => k.name);
+            const firstVictim = deadCharacters.find(c => c.deathAct === 1);
+            const finalVictim = deadCharacters.filter(c => c.deathAct === 3)[0];
+            
             const movieRecord = {
                 title: gameState.movieTitle,
                 year: gameState.movieYear,
-                characters: {}
+                setting: gameState.movieSetting,
+                characters: {},
+                deaths: deadCharacters.length,
+                survivors: survivors.length,
+                killers: killerNames,
+                killerArchetype: gameState.killers[0]?.archetype?.name,
+                firstVictim: firstVictim?.name,
+                finalVictim: finalVictim?.name,
+                allCharacters: gameState.characters.map(c => ({
+                    name: c.name,
+                    archetype: c.archetype.name,
+                    status: gameState.killers.includes(c) ? 'Killer' : c.status,
+                    deathAct: c.deathAct,
+                    isReturning: c.isReturning || false
+                }))
             };
             
             // Record each character's status in this movie
@@ -5109,6 +6495,331 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 
                 tbody.appendChild(row);
             });
+            
+            // Add film summary table after franchise history
+            displayFilmSummaryTable(container);
+        }
+        
+        function displayFilmSummaryTable(franchiseContainer) {
+            if (franchiseHistory.movies.length === 0) return;
+            
+            const summaryContainer = document.createElement('div');
+            summaryContainer.className = 'film-summary-table';
+            summaryContainer.style.marginTop = '30px';
+            
+            summaryContainer.innerHTML = `
+                <h3>🎬 Film Synopsis</h3>
+                <p style="color: #ccc; margin-bottom: 20px;">A brief summary of each film in the franchise.</p>
+                <table class="final-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Film</th>
+                            <th style="width: 120px;">Horror Meter™</th>
+                            <th>Synopsis</th>
+                        </tr>
+                    </thead>
+                    <tbody id="film-summary-tbody"></tbody>
+                </table>
+            `;
+            
+            franchiseContainer.appendChild(summaryContainer);
+            
+            const tbody = document.getElementById('film-summary-tbody');
+            
+            franchiseHistory.movies.forEach((movie, index) => {
+                const row = document.createElement('tr');
+                
+                const synopsis = generateFilmSynopsis(movie, index);
+                const ratings = generateHorrorMeterRatings(movie, index);
+                
+                // Check if movie has custom synopsis
+                const finalSynopsis = movie.customSynopsis || synopsis;
+                
+                row.innerHTML = `
+                    <td>
+                        <strong>${movie.title}</strong><br>
+                        <small style="opacity: 0.7;">${movie.year}</small>
+                    </td>
+                    <td style="text-align: center; font-size: 0.85rem; line-height: 1.3;">
+                        ${ratings}
+                    </td>
+                    <td style="font-size: 0.95rem; line-height: 1.4; position: relative;">
+                        <div id="synopsis-text-${index}" style="margin-bottom: 10px;">
+                            ${finalSynopsis}
+                        </div>
+                        <div id="synopsis-edit-${index}" style="display: none; margin-bottom: 10px;">
+                            <textarea id="synopsis-textarea-${index}" style="width: 100%; min-height: 80px; background: #2a2a2a; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 4px; font-size: 0.9rem; line-height: 1.4; resize: vertical;">${finalSynopsis}</textarea>
+                        </div>
+                        <div style="text-align: right; margin-top: 5px;">
+                            <button id="edit-btn-${index}" onclick="editSynopsis(${index})" style="background: #444; color: #fff; border: 1px solid #666; padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; cursor: pointer;">✏️ Edit</button>
+                            <button id="save-btn-${index}" onclick="saveSynopsis(${index})" style="background: #4CAF50; color: #fff; border: 1px solid #4CAF50; padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; cursor: pointer; display: none; margin-left: 5px;">💾 Save</button>
+                            <button id="cancel-btn-${index}" onclick="cancelEditSynopsis(${index})" style="background: #f44336; color: #fff; border: 1px solid #f44336; padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; cursor: pointer; display: none; margin-left: 5px;">❌ Cancel</button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function editSynopsis(movieIndex) {
+            const textDiv = document.getElementById(`synopsis-text-${movieIndex}`);
+            const editDiv = document.getElementById(`synopsis-edit-${movieIndex}`);
+            const editBtn = document.getElementById(`edit-btn-${movieIndex}`);
+            const saveBtn = document.getElementById(`save-btn-${movieIndex}`);
+            const cancelBtn = document.getElementById(`cancel-btn-${movieIndex}`);
+            
+            // Hide text, show textarea and save/cancel buttons
+            textDiv.style.display = 'none';
+            editDiv.style.display = 'block';
+            editBtn.style.display = 'none';
+            saveBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+            
+            // Focus on textarea
+            const textarea = document.getElementById(`synopsis-textarea-${movieIndex}`);
+            textarea.focus();
+        }
+        
+        function saveSynopsis(movieIndex) {
+            const textarea = document.getElementById(`synopsis-textarea-${movieIndex}`);
+            const newSynopsis = textarea.value.trim();
+            
+            if (!newSynopsis) {
+                alert('Synopsis cannot be empty.');
+                return;
+            }
+            
+            // Update the movie record in franchise history
+            if (franchiseHistory.movies[movieIndex]) {
+                franchiseHistory.movies[movieIndex].customSynopsis = newSynopsis;
+            }
+            
+            // Update the display
+            const textDiv = document.getElementById(`synopsis-text-${movieIndex}`);
+            textDiv.innerHTML = newSynopsis;
+            
+            // Hide edit mode, show text mode
+            cancelEditSynopsis(movieIndex);
+            
+            // Show success feedback
+            const saveBtn = document.getElementById(`save-btn-${movieIndex}`);
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '✅ Saved';
+            setTimeout(() => {
+                if (saveBtn) saveBtn.innerHTML = originalText;
+            }, 2000);
+        }
+        
+        function cancelEditSynopsis(movieIndex) {
+            const textDiv = document.getElementById(`synopsis-text-${movieIndex}`);
+            const editDiv = document.getElementById(`synopsis-edit-${movieIndex}`);
+            const editBtn = document.getElementById(`edit-btn-${movieIndex}`);
+            const saveBtn = document.getElementById(`save-btn-${movieIndex}`);
+            const cancelBtn = document.getElementById(`cancel-btn-${movieIndex}`);
+            const textarea = document.getElementById(`synopsis-textarea-${movieIndex}`);
+            
+            // Reset textarea to original value
+            const movie = franchiseHistory.movies[movieIndex];
+            if (movie) {
+                const originalSynopsis = movie.customSynopsis || generateFilmSynopsis(movie, movieIndex);
+                textarea.value = originalSynopsis;
+            }
+            
+            // Show text, hide textarea and save/cancel buttons
+            textDiv.style.display = 'block';
+            editDiv.style.display = 'none';
+            editBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+        }
+        
+        function generateFilmSynopsis(movie, filmNumber) {
+            const isSequel = filmNumber > 0;
+            const allCharacters = movie.allCharacters || [];
+            const deadCharacters = allCharacters.filter(c => c.status === 'Dead');
+            const survivors = allCharacters.filter(c => c.status === 'Alive');
+            const firstVictim = allCharacters.find(c => c.deathAct === 1);
+            
+            // Setting definitions
+            const settingMap = {
+                'crimson-falls': {
+                    location: "the isolated mountain town of Crimson Falls",
+                    atmosphere: "where autumn mist clings to abandoned cabins"
+                },
+                'willowbrook': {
+                    location: "the forgotten lakeside community of Willowbrook",
+                    atmosphere: "where dark waters hold deadly secrets"
+                },
+                'ravenshollow': {
+                    location: "the remote college town of Ravenshollow",
+                    atmosphere: "where ivy-covered halls echo with screams"
+                },
+                'cedar-ridge': {
+                    location: "the snowbound village of Cedar Ridge",
+                    atmosphere: "where winter winds carry whispers of murder"
+                },
+                'driftwood-bay': {
+                    location: "the sleepy coastal town of Driftwood Bay",
+                    atmosphere: "where lighthouse beams reveal unspeakable horrors"
+                },
+                'harvest-moon': {
+                    location: "the agricultural settlement of Harvest Moon",
+                    atmosphere: "where cornfields hide more than just crops"
+                },
+                'shadowbrook': {
+                    location: "the abandoned mining town of Shadowbrook",
+                    atmosphere: "where old tunnels conceal fresh graves"
+                }
+            };
+            
+            const events = [
+                "a weekend getaway", "a reunion party", "a camping trip", "a holiday celebration",
+                "a bachelor party", "a graduation celebration", "a research expedition", 
+                "a family gathering", "a spring break vacation", "a wedding weekend"
+            ];
+            
+            // Use consistent setting for sequels or user's choice
+            let setting;
+            if (isSequel && franchiseHistory.movies.length > 0) {
+                // Use same setting as first movie for consistency
+                const firstMovieSetting = franchiseHistory.movies[0].setting;
+                if (firstMovieSetting && typeof firstMovieSetting === 'object' && firstMovieSetting.type === 'custom') {
+                    // Use custom setting from first movie
+                    setting = {
+                        location: firstMovieSetting.location,
+                        atmosphere: firstMovieSetting.atmosphere
+                    };
+                } else if (firstMovieSetting && firstMovieSetting !== 'random' && settingMap[firstMovieSetting]) {
+                    setting = settingMap[firstMovieSetting];
+                } else {
+                    // Fallback to random if first movie setting was random or invalid
+                    const settingKeys = Object.keys(settingMap);
+                    setting = settingMap[settingKeys[Math.floor(Math.random() * settingKeys.length)]];
+                }
+            } else {
+                // For first movie, use user's choice or random
+                if (movie.setting && typeof movie.setting === 'object' && movie.setting.type === 'custom') {
+                    // Use custom setting
+                    setting = {
+                        location: movie.setting.location,
+                        atmosphere: movie.setting.atmosphere
+                    };
+                } else if (movie.setting && movie.setting !== 'random' && settingMap[movie.setting]) {
+                    setting = settingMap[movie.setting];
+                } else {
+                    // Random selection
+                    const settingKeys = Object.keys(settingMap);
+                    setting = settingMap[settingKeys[Math.floor(Math.random() * settingKeys.length)]];
+                }
+            }
+            
+            const event = events[Math.floor(Math.random() * events.length)];
+            
+            // Build concise atmospheric synopsis (3-4 sentences max)
+            let synopsis = '';
+            if (isSequel) {
+                const returningCharacters = allCharacters.filter(c => c.isReturning);
+                if (returningCharacters.length > 0) {
+                    synopsis += `Years after surviving the bloodbath that terrorized ${setting.location}, ${returningCharacters.map(c => c.name).join(' and ')} believed the nightmare was finally over. `;
+                }
+                synopsis += `But evil never truly dies in ${setting.location}. `;
+            } else {
+                synopsis += `In ${setting.location}, ${setting.atmosphere}, `;
+            }
+            
+            // Add the gathering
+            const groupSize = allCharacters.length;
+            if (groupSize <= 6) {
+                synopsis += `${allCharacters.slice(0, 3).map(c => c.name).join(', ')} and their close friends arrive for ${event}, unaware that death is already stalking their every move. `;
+            } else {
+                synopsis += `${allCharacters.slice(0, 4).map(c => c.name).join(', ')} lead a group of ${groupSize} friends to ${setting.location} for ${event}, unaware that death is already stalking their every move. `;
+            }
+            
+            // Add dramatic turning point without revealing killer
+            if (firstVictim || movie.firstVictim) {
+                const victim = firstVictim?.name || movie.firstVictim;
+                synopsis += `The terror begins when ${victim} is brutally murdered, their screams piercing the night as a masked killer claims their first victim. `;
+            } else {
+                synopsis += `The slaughter begins without warning as a masked killer emerges from the shadows, hunger for blood driving their every move. `;
+            }
+            
+            // Add final outcome based on survivors
+            if (survivors.length === 0) {
+                synopsis += `In a blood-soaked finale, the killer completes their masterpiece of carnage, leaving no soul alive to tell the tale.`;
+            } else if (survivors.length === 1) {
+                synopsis += `Only ${survivors[0].name} remains standing in the final confrontation, forever scarred by the horrors they've witnessed.`;
+            } else {
+                synopsis += `${survivors.slice(0, 2).map(c => c.name).join(' and ')} must band together for one final, desperate stand against the killer's reign of terror.`;
+            }
+            
+            return synopsis;
+        }
+        
+        function generateHorrorMeterRatings(movie, filmNumber) {
+            const isSequel = filmNumber > 0;
+            const deaths = movie.deaths || 0;
+            const survivors = movie.survivors || 0;
+            const totalCharacters = deaths + survivors;
+            
+            // Calculate base scores
+            let criticsBase = 50;
+            let audienceBase = 60;
+            
+            // Critics scoring factors
+            if (isSequel) {
+                criticsBase -= 15; // Critics often hate sequels
+            }
+            
+            // Death count impact on critics (they prefer "artistic" horror)
+            if (deaths <= 2) {
+                criticsBase += 20; // "Psychological masterpiece"
+            } else if (deaths >= 8) {
+                criticsBase -= 10; // "Mindless gore"
+            }
+            
+            // Survival rate impact on critics
+            const survivalRate = survivors / totalCharacters;
+            if (survivalRate === 0) {
+                criticsBase -= 15; // "Nihilistic and hopeless"
+            } else if (survivors === 1) {
+                criticsBase += 10; // "Classic final girl trope done well"
+            }
+            
+            // Audience scoring factors (they love carnage)
+            if (deaths >= 6) {
+                audienceBase += 15; // "Epic body count!"
+            } else if (deaths <= 2) {
+                audienceBase -= 20; // "Boring, not enough kills"
+            }
+            
+            // Sequel impact on audience (they're more forgiving)
+            if (isSequel) {
+                audienceBase -= 5; // Slight drop but not as harsh as critics
+            }
+            
+            // Add randomness for variety
+            criticsBase += Math.floor(Math.random() * 30) - 15; // ±15 variation
+            audienceBase += Math.floor(Math.random() * 20) - 10; // ±10 variation
+            
+            // Clamp scores between 10-95
+            const criticsScore = Math.max(10, Math.min(95, criticsBase));
+            const audienceScore = Math.max(15, Math.min(98, audienceBase));
+            
+            // Generate score colors
+            const criticsColor = criticsScore >= 70 ? '#4CAF50' : criticsScore >= 40 ? '#FF9800' : '#F44336';
+            const audienceColor = audienceScore >= 70 ? '#4CAF50' : audienceScore >= 40 ? '#FF9800' : '#F44336';
+            
+            return `
+                <div style="margin-bottom: 8px;">
+                    <strong style="color: ${criticsColor};">🎭 ${criticsScore}%</strong><br>
+                    <small style="opacity: 0.8;">Critics</small>
+                </div>
+                <div>
+                    <strong style="color: ${audienceColor};">🍿 ${audienceScore}%</strong><br>
+                    <small style="opacity: 0.8;">Audience</small>
+                </div>
+            `;
         }
 
 
@@ -5476,6 +7187,9 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 existingFranchiseTable.remove();
             }
             
+            // Inherit setting from previous movie for consistency
+            const previousSetting = franchiseHistory.movies.length > 0 ? franchiseHistory.movies[0].setting : 'random';
+            
             // Reset everything but keep selected survivors
             gameState = {
                 characters: [],
@@ -5484,6 +7198,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 currentAct: 1,
                 movieTitle: sequelTitle,
                 movieYear: sequelYear,
+                movieSetting: previousSetting,
                 events: [],
                 isKillerMode: sequelGameMode === 'killer',
                 killerPlayer: null,
@@ -5512,6 +7227,27 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 returningSurvivor.stats.intelligence = Math.min(10, returningSurvivor.stats.intelligence + 1);
                 returningSurvivor.stats.stealth = Math.min(10, returningSurvivor.stats.stealth + 1);
                 returningSurvivor.survivalChance = calculateSurvivalChance(returningSurvivor.stats);
+                
+                // Create legacy memory system for returning survivors
+                returningSurvivor.legacyMemory = {
+                    previousMovieCount: (survivor.legacyMemory?.previousMovieCount || 0) + 1,
+                    totalDeathsWitnessed: survivor.legacyMemory?.totalDeathsWitnessed || 0,
+                    killersEncountered: survivor.legacyMemory?.killersEncountered || [],
+                    survivalExperience: (survivor.legacyMemory?.survivalExperience || 0) + 1,
+                    traumaticEvents: survivor.legacyMemory?.traumaticEvents || [],
+                    trustedAllies: survivor.legacyMemory?.trustedAllies || [],
+                    ptsdLevel: survivor.legacyMemory?.ptsdLevel || 0.2 // All survivors have some PTSD
+                };
+                
+                // Add memories from the previous movie
+                if (survivor.memory) {
+                    returningSurvivor.legacyMemory.totalDeathsWitnessed += survivor.memory.witnessedDeaths.length;
+                    returningSurvivor.legacyMemory.traumaticEvents.push({
+                        movie: gameState.movieTitle || 'Previous Horror',
+                        description: `Survived a killing spree`,
+                        impact: 'high'
+                    });
+                }
                 
                 gameState.characters.push(returningSurvivor);
             });
