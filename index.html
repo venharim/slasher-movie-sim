@@ -731,6 +731,170 @@
         }
 
 
+        /* Character Portrait System */
+        .character-portrait {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #666;
+            margin-bottom: 10px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .character-portrait:hover {
+            border-color: #ff4444;
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
+        
+        .character-portrait img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .portrait-upload-section {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px dashed #555;
+        }
+        
+        .portrait-upload-section:hover {
+            border-color: #ff4444;
+            background: #333;
+        }
+        
+        .portrait-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .portrait-option-btn {
+            padding: 8px 12px;
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .portrait-option-btn:hover {
+            background: #555;
+            border-color: #ff4444;
+        }
+        
+        .portrait-option-btn.active {
+            background: #ff4444;
+            border-color: #ff6666;
+        }
+        
+        .portrait-input {
+            width: 100%;
+            padding: 8px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        
+        .portrait-input:focus {
+            border-color: #ff4444;
+            outline: none;
+        }
+        
+        .portrait-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+        
+        .portrait-preview img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .portrait-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .portrait-controls button {
+            padding: 4px 8px;
+            background: #555;
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .portrait-controls button:hover {
+            background: #666;
+        }
+        
+        .portrait-error {
+            color: #ff6666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        /* Movie log character portraits */
+        .character-mini-portrait {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #666;
+            margin-right: 8px;
+            vertical-align: middle;
+            display: inline-block;
+        }
+        
+        /* Cast grid status portraits */
+        .cast-status-portrait {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #666;
+            margin-bottom: 5px;
+        }
+        
+        .cast-status-portrait.alive {
+            border-color: #4CAF50;
+        }
+        
+        .cast-status-portrait.dead {
+            border-color: #f44336;
+            filter: grayscale(100%) brightness(0.5);
+        }
+        
+        .cast-status-portrait.killer {
+            border-color: #ff9800;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+        }
+
         @media (max-width: 768px) {
             .cast-grid {
                 grid-template-columns: 1fr;
@@ -742,6 +906,11 @@
             
             .header h1 {
                 font-size: 2rem;
+            }
+            
+            .character-portrait {
+                width: 60px;
+                height: 60px;
             }
         }
     </style>
@@ -1963,8 +2132,41 @@
             }
         };
 
+        // Global dialogue tracking to prevent duplicates
+        let globalDialogueHistory = [];
+        
         // Enhanced dialogue generation
         function generateCampyDialogue(character, situation, context = {}) {
+            // Use AI personality system if available
+            if (character.ai) {
+                // Update AI emotional state based on recent events
+                if (situation === 'death' && context.victim) {
+                    character.ai.updateEmotionalState({ type: 'death', intensity: 0.4 });
+                } else if (situation === 'attack') {
+                    character.ai.updateEmotionalState({ type: 'attack', intensity: 0.5 });
+                } else if (situation === 'investigation') {
+                    character.ai.updateEmotionalState({ type: 'investigation', intensity: 0.2 });
+                }
+                
+                // Map legacy situations to AI situations
+                let aiSituation = situation;
+                if (situation === 'terrified') aiSituation = 'fear';
+                if (situation === 'suspicious') aiSituation = 'investigation';
+                if (situation === 'death') aiSituation = 'death';
+                if (situation === 'attack') aiSituation = 'attack';
+                if (situation === 'group') aiSituation = 'group';
+                
+                // Generate AI dialogue with context
+                const aiDialogue = character.ai.generatePersonalityDialogue(aiSituation, context);
+                if (aiDialogue && aiDialogue !== "I don't know what to think anymore...") {
+                    // Add character attribution to AI dialogue
+                    const characterName = character.name || `${character.archetype?.name || 'Unknown Character'}`;
+                    const attribution = character.isReturning ? `${characterName} (veteran survivor)` : characterName;
+                    return `"${aiDialogue}" - ${attribution}`;
+                }
+            }
+            
+            // Fallback to legacy system for compatibility
             // Check for returning survivor special dialogue
             if (character.isReturning && character.legacyMemory) {
                 const legacyDialogue = generateLegacyDialogue(character, situation);
@@ -2013,7 +2215,40 @@
                 }
             }
 
-            return `"${selectedDialogue}" - ${character.name}`;
+            // Final failsafe to ensure character attribution
+            const characterName = character.name || character.archetype?.name || 'Unknown Character';
+            const finalDialogue = `"${selectedDialogue}" - ${characterName}`;
+            
+            // Ensure no duplicate attribution
+            if (selectedDialogue.includes(' - ')) {
+                // Check for recent duplicates and prevent them
+                const dialogueText = selectedDialogue.split(' - ')[0].replace(/"/g, '');
+                if (globalDialogueHistory.includes(dialogueText)) {
+                    // Try to get alternative dialogue
+                    const alternatives = [
+                        `"This is getting out of hand!" - ${characterName}`,
+                        `"I need to think about this..." - ${characterName}`,
+                        `"Something's not right here." - ${characterName}`,
+                        `"We need to be careful." - ${characterName}`
+                    ];
+                    const alternative = alternatives[Math.floor(Math.random() * alternatives.length)];
+                    globalDialogueHistory.push(alternative.split(' - ')[0].replace(/"/g, ''));
+                    return alternative;
+                }
+                globalDialogueHistory.push(dialogueText);
+                if (globalDialogueHistory.length > 10) {
+                    globalDialogueHistory.shift(); // Keep last 10 dialogue pieces
+                }
+                return selectedDialogue; // Already has attribution
+            }
+            
+            // Track new dialogue to prevent duplicates
+            globalDialogueHistory.push(selectedDialogue);
+            if (globalDialogueHistory.length > 10) {
+                globalDialogueHistory.shift();
+            }
+            
+            return finalDialogue;
         }
         
         function generateLegacyDialogue(character, situation) {
@@ -2511,6 +2746,670 @@
         }
 
 
+        // AI Personality Engine
+        class CharacterAI {
+            constructor(character) {
+                this.character = character;
+                this.emotionalState = {
+                    fear: 0.2,
+                    trust: 0.7,
+                    suspicion: 0.1,
+                    anger: 0.1,
+                    desperation: 0.0
+                };
+                this.personalityTraits = this.calculatePersonalityTraits();
+            }
+            
+            calculatePersonalityTraits() {
+                const archetype = this.character.archetype;
+                const stats = this.character.stats;
+                
+                return {
+                    analytical: stats.intelligence / 10,
+                    social: stats.social / 10,
+                    brave: stats.athletics / 10,
+                    cautious: stats.stealth / 10,
+                    optimistic: stats.luck / 10,
+                    leadership: (stats.social + stats.intelligence) / 20,
+                    impulsive: (10 - stats.intelligence + stats.athletics) / 20,
+                    paranoid: (this.character.memory?.traumaLevel || 0) + (stats.stealth / 20)
+                };
+            }
+            
+            updateEmotionalState(event) {
+                const eventType = event.type;
+                const intensity = event.intensity || 0.3;
+                
+                switch(eventType) {
+                    case 'death':
+                        this.emotionalState.fear = Math.min(1.0, this.emotionalState.fear + intensity);
+                        this.emotionalState.trust = Math.max(0.0, this.emotionalState.trust - intensity * 0.5);
+                        break;
+                    case 'investigation':
+                        if (this.personalityTraits.analytical > 0.6) {
+                            this.emotionalState.trust = Math.min(1.0, this.emotionalState.trust + 0.1);
+                        }
+                        break;
+                    case 'group-split':
+                        this.emotionalState.fear = Math.min(1.0, this.emotionalState.fear + 0.2);
+                        break;
+                    case 'killer-reveal':
+                        this.emotionalState.suspicion = 1.0;
+                        this.emotionalState.anger = Math.min(1.0, this.emotionalState.anger + 0.5);
+                        break;
+                }
+            }
+            
+            generatePersonalityDialogue(situation, context = {}) {
+                const archetype = this.character.archetype.name;
+                const traits = this.personalityTraits;
+                const emotions = this.emotionalState;
+                const isReturning = this.character.isReturning;
+                
+                return this.selectBestDialogue(archetype, traits, emotions, situation, context, isReturning);
+            }
+            
+            selectBestDialogue(archetype, traits, emotions, situation, context, isReturning) {
+                const dialogueDb = this.getDialogueDatabase();
+                const candidates = dialogueDb[situation] || [];
+                
+                if (candidates.length === 0) return this.getFallbackDialogue(archetype, situation);
+                
+                // Filter out recently used dialogue for this character
+                if (!this.recentDialogue) this.recentDialogue = [];
+                const availableCandidates = candidates.filter(dialogue => 
+                    !this.recentDialogue.includes(dialogue.text)
+                );
+                
+                // Use all candidates if we've used them all recently
+                const finalCandidates = availableCandidates.length > 0 ? availableCandidates : candidates;
+                
+                // Score each dialogue option based on personality fit
+                let bestDialogues = [];
+                let bestScore = 0;
+                
+                finalCandidates.forEach(dialogue => {
+                    const score = this.scoreDialogue(dialogue, archetype, traits, emotions, context, isReturning);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestDialogues = [dialogue];
+                    } else if (score === bestScore) {
+                        bestDialogues.push(dialogue);
+                    }
+                });
+                
+                // Randomly select from best scoring options
+                const selectedDialogue = bestDialogues[Math.floor(Math.random() * bestDialogues.length)];
+                
+                // Track recently used dialogue
+                this.recentDialogue.push(selectedDialogue.text);
+                if (this.recentDialogue.length > 3) {
+                    this.recentDialogue.shift(); // Keep only last 3 dialogue pieces
+                }
+                
+                return this.personalizeDialogue(selectedDialogue, context);
+            }
+            
+            scoreDialogue(dialogue, archetype, traits, emotions, context, isReturning) {
+                let score = 0;
+                
+                // Archetype matching
+                if (dialogue.archetypes && dialogue.archetypes.includes(archetype)) {
+                    score += 3;
+                }
+                
+                // Personality trait matching
+                if (dialogue.traits) {
+                    Object.keys(dialogue.traits).forEach(trait => {
+                        const required = dialogue.traits[trait];
+                        const actual = traits[trait] || 0;
+                        if (required === 'high' && actual > 0.6) score += 2;
+                        if (required === 'low' && actual < 0.4) score += 2;
+                        if (required === 'medium' && actual >= 0.4 && actual <= 0.6) score += 1;
+                    });
+                }
+                
+                // Emotional state matching
+                if (dialogue.emotions) {
+                    Object.keys(dialogue.emotions).forEach(emotion => {
+                        const required = dialogue.emotions[emotion];
+                        const actual = emotions[emotion] || 0;
+                        if (required === 'high' && actual > 0.6) score += 2;
+                        if (required === 'low' && actual < 0.4) score += 2;
+                    });
+                }
+                
+                // Returning survivor bonus
+                if (isReturning && dialogue.veteranBonus) {
+                    score += dialogue.veteranBonus;
+                }
+                
+                return score;
+            }
+            
+            personalizeDialogue(dialogue, context) {
+                let text = dialogue.text;
+                
+                // Replace placeholders with context
+                if (context.victim && text.includes('[VICTIM]')) {
+                    text = text.replace(/\[VICTIM\]/g, context.victim);
+                }
+                if (context.relationshipTarget && text.includes('[VICTIM]')) {
+                    text = text.replace(/\[VICTIM\]/g, context.relationshipTarget.name);
+                }
+                if (context.location && text.includes('[LOCATION]')) {
+                    text = text.replace(/\[LOCATION\]/g, context.location);
+                }
+                if (this.character.name && text.includes('[SELF]')) {
+                    text = text.replace(/\[SELF\]/g, this.character.name);
+                }
+                
+                // Handle additional common placeholders
+                if (context.suspect && text.includes('[SUSPECT]')) {
+                    text = text.replace(/\[SUSPECT\]/g, context.suspect);
+                }
+                if (context.killer && text.includes('[KILLER]')) {
+                    text = text.replace(/\[KILLER\]/g, context.killer);
+                }
+                
+                // If we still have unreplaced [VICTIM] placeholder, try to find a recent victim
+                if (text.includes('[VICTIM]')) {
+                    const recentVictim = gameState.characters.find(c => c.status === 'Dead');
+                    if (recentVictim) {
+                        text = text.replace(/\[VICTIM\]/g, recentVictim.name);
+                    } else {
+                        text = text.replace(/\[VICTIM\]/g, 'someone');
+                    }
+                }
+                
+                return text;
+            }
+            
+            getFallbackDialogue(archetype, situation) {
+                const fallbacks = {
+                    'The Nerd': {
+                        investigation: "Let me analyze the evidence logically...",
+                        death: "Statistically speaking, this shouldn't be happening.",
+                        group: "We need to approach this systematically."
+                    },
+                    'The Jock': {
+                        investigation: "Let's just find this guy and take him down!",
+                        death: "This is insane! Nobody messes with my friends!",
+                        group: "I can handle myself - I'm not afraid of some psycho."
+                    },
+                    'The Final Girl': {
+                        investigation: "We need to figure this out before anyone else gets hurt.",
+                        death: "This has to stop. I won't let anyone else die.",
+                        group: "We have to stick together and be smart about this."
+                    }
+                };
+                
+                return fallbacks[archetype]?.[situation] || "I don't know what to think anymore...";
+            }
+            
+            getDialogueDatabase() {
+                return {
+                    investigation: [
+                        {
+                            text: "Based on the evidence, I believe the killer is approximately 5'10\", left-handed, and has medical knowledge.",
+                            archetypes: ['The Nerd', 'The Skeptic'],
+                            traits: { analytical: 'high', social: 'low' },
+                            emotions: { fear: 'low' }
+                        },
+                        {
+                            text: "This is textbook slasher behavior! Next they'll target whoever split off from the group!",
+                            archetypes: ['The Horror Fanatic'],
+                            traits: { analytical: 'medium' },
+                            emotions: { fear: 'medium' }
+                        },
+                        {
+                            text: "Come on, you're all jumping to conclusions. Maybe this really was just an accident.",
+                            archetypes: ['The Skeptic'],
+                            traits: { analytical: 'high', paranoid: 'low' },
+                            emotions: { suspicion: 'low' }
+                        },
+                        {
+                            text: "We need to check everyone's alibi. One of us might not be who they seem.",
+                            archetypes: ['The Final Girl', 'The Reporter'],
+                            traits: { leadership: 'high', cautious: 'high' },
+                            emotions: { suspicion: 'high' }
+                        },
+                        {
+                            text: "I don't care about evidence - someone's trying to kill us! We need to get out of here!",
+                            archetypes: ['The Drama Queen', 'The Coward'],
+                            traits: { impulsive: 'high', brave: 'low' },
+                            emotions: { fear: 'high' }
+                        },
+                        {
+                            text: "This feels just like [LOCATION] all over again... The killer always strikes when we split up.",
+                            archetypes: ['The Final Girl'],
+                            traits: { analytical: 'medium', paranoid: 'high' },
+                            emotions: { fear: 'high' },
+                            veteranBonus: 5
+                        }
+                    ],
+                    death: [
+                        {
+                            text: "No... [VICTIM] was supposed to be safe. This is all my fault for not protecting them better.",
+                            archetypes: ['The Final Girl', 'The Hero'],
+                            traits: { leadership: 'high' },
+                            emotions: { anger: 'high', fear: 'high' }
+                        },
+                        {
+                            text: "That's it! I'm done running! This psycho wants a fight? Let's give them one!",
+                            archetypes: ['The Jock', 'The Hero'],
+                            traits: { brave: 'high', impulsive: 'high' },
+                            emotions: { anger: 'high', fear: 'low' }
+                        },
+                        {
+                            text: "Oh God, oh God... [VICTIM] is really dead. This isn't happening. This can't be real.",
+                            archetypes: ['The Innocent', 'The Drama Queen'],
+                            traits: { optimistic: 'low', brave: 'low' },
+                            emotions: { fear: 'high' }
+                        },
+                        {
+                            text: "I watched three of my friends die that way last time. The blood, the screams... it's happening again.",
+                            archetypes: ['The Final Girl', 'The Outcast'],
+                            traits: { paranoid: 'high' },
+                            emotions: { fear: 'high', anger: 'medium' },
+                            veteranBonus: 5
+                        },
+                        {
+                            text: "According to my calculations, if the killer maintains this pace, we have approximately 47 minutes before the next attack.",
+                            archetypes: ['The Nerd'],
+                            traits: { analytical: 'high', social: 'low' },
+                            emotions: { fear: 'medium' }
+                        }
+                    ],
+                    group: [
+                        {
+                            text: "We need to stick together. Every horror movie teaches us that splitting up is suicide.",
+                            archetypes: ['The Horror Fanatic', 'The Final Girl'],
+                            traits: { analytical: 'medium', leadership: 'high' }
+                        },
+                        {
+                            text: "Screw that - I can handle myself. You guys do whatever you want.",
+                            archetypes: ['The Bad Boy', 'The Jock'],
+                            traits: { brave: 'high', social: 'low', impulsive: 'high' }
+                        },
+                        {
+                            text: "There's a service tunnel behind the kitchen that leads to the parking lot. I know these buildings.",
+                            archetypes: ['The Coward', 'The Outcast'],
+                            traits: { cautious: 'high', analytical: 'medium' }
+                        },
+                        {
+                            text: "Look, I've survived this before. Trust me when I say the killer is counting on us to panic.",
+                            archetypes: ['The Final Girl'],
+                            traits: { leadership: 'high', analytical: 'high' },
+                            emotions: { trust: 'high' },
+                            veteranBonus: 5
+                        }
+                    ],
+                    fear: [
+                        {
+                            text: "I can't stop shaking... every shadow looks like it could be hiding something.",
+                            archetypes: ['The Innocent', 'The Drama Queen'],
+                            traits: { brave: 'low', optimistic: 'low' },
+                            emotions: { fear: 'high' }
+                        },
+                        {
+                            text: "According to my research, panic attacks increase mortality rates by 34% in survival scenarios.",
+                            archetypes: ['The Nerd'],
+                            traits: { analytical: 'high', social: 'low' },
+                            emotions: { fear: 'medium' }
+                        },
+                        {
+                            text: "I'm not scared, I'm just... strategically concerned about our current tactical situation.",
+                            archetypes: ['The Jock', 'The Hero'],
+                            traits: { brave: 'high', social: 'medium' },
+                            emotions: { fear: 'medium' }
+                        },
+                        {
+                            text: "This is exactly what happened before... the fear, the isolation, then they picked us off one by one.",
+                            archetypes: ['The Final Girl'],
+                            traits: { paranoid: 'high' },
+                            emotions: { fear: 'high' },
+                            veteranBonus: 5
+                        },
+                        {
+                            text: "I know every hiding spot in this place. We just need to stay calm and think.",
+                            archetypes: ['The Coward', 'The Outcast'],
+                            traits: { cautious: 'high', analytical: 'medium' },
+                            emotions: { fear: 'medium' }
+                        }
+                    ],
+                    attack: [
+                        {
+                            text: "Help me! Someone help! They're trying to kill me!",
+                            archetypes: ['The Innocent', 'The Drama Queen', 'The Flirt'],
+                            traits: { social: 'high', brave: 'low' },
+                            emotions: { fear: 'high' }
+                        },
+                        {
+                            text: "No! I calculated a 73% survival probability! This wasn't supposed to happen!",
+                            archetypes: ['The Nerd'],
+                            traits: { analytical: 'high', optimistic: 'high' },
+                            emotions: { fear: 'high' }
+                        },
+                        {
+                            text: "You want a piece of me? Come on! I'm not going down without a fight!",
+                            archetypes: ['The Jock', 'The Hero', 'The Bad Boy'],
+                            traits: { brave: 'high', impulsive: 'high' },
+                            emotions: { anger: 'high', fear: 'low' }
+                        },
+                        {
+                            text: "Not again! I won't let you take me like you took the others!",
+                            archetypes: ['The Final Girl'],
+                            traits: { paranoid: 'high', brave: 'medium' },
+                            emotions: { fear: 'high', anger: 'high' },
+                            veteranBonus: 5
+                        },
+                        {
+                            text: "I should have listened to the warnings... I should have stayed hidden...",
+                            archetypes: ['The Coward', 'The Skeptic'],
+                            traits: { cautious: 'high', paranoid: 'high' },
+                            emotions: { fear: 'high' }
+                        }
+                    ],
+                    suspicious: [
+                        {
+                            text: "Has anyone noticed [SUSPECT] has been acting weird lately? Like, really weird?",
+                            archetypes: ['The Final Girl', 'The Skeptic'],
+                            traits: { analytical: 'medium', social: 'medium' },
+                            emotions: { suspicion: 'high' }
+                        },
+                        {
+                            text: "I've been tracking everyone's movements, and [SUSPECT]'s alibis don't add up mathematically.",
+                            archetypes: ['The Nerd'],
+                            traits: { analytical: 'high', social: 'low' },
+                            emotions: { suspicion: 'high' }
+                        },
+                        {
+                            text: "Look, I don't want to point fingers, but [SUSPECT] was the last person seen with the victim.",
+                            archetypes: ['The Reporter', 'The Horror Fanatic'],
+                            traits: { analytical: 'medium', social: 'high' },
+                            emotions: { suspicion: 'medium' }
+                        },
+                        {
+                            text: "I've seen this pattern before... the killer always tries to deflect suspicion onto others.",
+                            archetypes: ['The Final Girl'],
+                            traits: { analytical: 'high', paranoid: 'high' },
+                            emotions: { suspicion: 'high' },
+                            veteranBonus: 5
+                        },
+                        {
+                            text: "This is just like in 'Scream' - the killer is always someone you trust!",
+                            archetypes: ['The Horror Fanatic'],
+                            traits: { analytical: 'medium', social: 'high' },
+                            emotions: { suspicion: 'medium' }
+                        }
+                    ]
+                };
+            }
+        }
+
+        // AI Synopsis Generator
+        class SynopsisAI {
+            constructor() {
+                this.usedPhrases = new Set();
+                this.sequelCounter = 0;
+            }
+            
+            generateEnhancedSynopsis(movie, filmNumber, previousSynopses = []) {
+                const isSequel = filmNumber > 0;
+                this.sequelCounter = filmNumber;
+                
+                // Analyze previous synopses to avoid repetition
+                if (previousSynopses.length > 0) {
+                    this.analyzeExistingLanguage(previousSynopses);
+                }
+                
+                const synopsis = this.createUniqueSynopsis(movie, isSequel);
+                return synopsis;
+            }
+            
+            analyzeExistingLanguage(previousSynopses) {
+                // Extract key phrases from previous synopses to avoid repetition
+                previousSynopses.forEach(synopsis => {
+                    const phrases = this.extractKeyPhrases(synopsis);
+                    phrases.forEach(phrase => this.usedPhrases.add(phrase.toLowerCase()));
+                });
+            }
+            
+            extractKeyPhrases(text) {
+                // Extract distinctive phrases (3+ words) from existing synopsis
+                const sentences = text.split(/[.!?]+/);
+                const phrases = [];
+                
+                sentences.forEach(sentence => {
+                    const words = sentence.trim().split(' ');
+                    if (words.length >= 3) {
+                        // Extract meaningful 3-5 word phrases
+                        for (let i = 0; i <= words.length - 3; i++) {
+                            const phrase = words.slice(i, i + 4).join(' ').toLowerCase();
+                            if (this.isMeaningfulPhrase(phrase)) {
+                                phrases.push(phrase);
+                            }
+                        }
+                    }
+                });
+                
+                return phrases;
+            }
+            
+            isMeaningfulPhrase(phrase) {
+                // Filter out common/generic phrases
+                const genericPhrases = ['the', 'and', 'but', 'for', 'are', 'with', 'they', 'have', 'this', 'that', 'from', 'will', 'been'];
+                const words = phrase.split(' ');
+                return !words.every(word => genericPhrases.includes(word) || word.length < 3);
+            }
+            
+            createUniqueSynopsis(movie, isSequel) {
+                const allCharacters = movie.allCharacters || [];
+                const deadCharacters = allCharacters.filter(c => c.status === 'Dead');
+                const survivors = allCharacters.filter(c => c.status === 'Alive');
+                const firstVictim = allCharacters.find(c => c.deathAct === 1);
+                
+                // Get setting information
+                const setting = this.getSettingInfo(movie);
+                const event = this.getEventType();
+                
+                // Generate unique opening based on sequel status and previous language
+                const opening = this.generateUniqueOpening(movie, isSequel, setting, event);
+                const conflict = this.generateUniqueConflict(firstVictim, deadCharacters, movie);
+                const climax = this.generateUniqueClimax(survivors, deadCharacters, movie);
+                
+                return `${opening} ${conflict} ${climax}`;
+            }
+            
+            getSettingInfo(movie) {
+                const settingMap = {
+                    'crimson-falls': {
+                        location: "the isolated mountain town of Crimson Falls",
+                        atmosphere: "where autumn mist clings to abandoned cabins"
+                    },
+                    'willowbrook': {
+                        location: "the forgotten lakeside community of Willowbrook", 
+                        atmosphere: "where dark waters hold deadly secrets"
+                    },
+                    'ravenshollow': {
+                        location: "the remote college town of Ravenshollow",
+                        atmosphere: "where ivy-covered halls echo with screams"
+                    },
+                    'cedar-ridge': {
+                        location: "the snowbound village of Cedar Ridge",
+                        atmosphere: "where winter winds carry whispers of murder"
+                    },
+                    'driftwood-bay': {
+                        location: "the sleepy coastal town of Driftwood Bay",
+                        atmosphere: "where lighthouse beams reveal unspeakable horrors"
+                    },
+                    'harvest-moon': {
+                        location: "the agricultural settlement of Harvest Moon",
+                        atmosphere: "where cornfields hide more than just crops"
+                    },
+                    'shadowbrook': {
+                        location: "the abandoned mining town of Shadowbrook",
+                        atmosphere: "where old tunnels conceal fresh graves"
+                    }
+                };
+                
+                if (movie.setting && typeof movie.setting === 'object' && movie.setting.type === 'custom') {
+                    return {
+                        location: movie.setting.location,
+                        atmosphere: movie.setting.atmosphere
+                    };
+                } else if (movie.setting && settingMap[movie.setting]) {
+                    return settingMap[movie.setting];
+                } else {
+                    const settingKeys = Object.keys(settingMap);
+                    return settingMap[settingKeys[Math.floor(Math.random() * settingKeys.length)]];
+                }
+            }
+            
+            getEventType() {
+                const events = [
+                    "a weekend getaway", "a reunion party", "a camping trip", "a holiday celebration",
+                    "a bachelor party", "a graduation celebration", "a research expedition", 
+                    "a family gathering", "a spring break vacation", "a wedding weekend",
+                    "a corporate retreat", "a birthday celebration", "a memorial service"
+                ];
+                return events[Math.floor(Math.random() * events.length)];
+            }
+            
+            generateUniqueOpening(movie, isSequel, setting, event) {
+                const allCharacters = movie.allCharacters || [];
+                const returningCharacters = allCharacters.filter(c => c.isReturning);
+                
+                if (isSequel && returningCharacters.length > 0) {
+                    const sequelOpenings = this.getSequelOpenings(returningCharacters, setting, this.sequelCounter);
+                    return this.selectUnusedPhrase(sequelOpenings);
+                } else {
+                    const originalOpenings = this.getOriginalOpenings(allCharacters, setting, event);
+                    return this.selectUnusedPhrase(originalOpenings);
+                }
+            }
+            
+            getSequelOpenings(returningCharacters, setting, sequelNumber) {
+                const timeGaps = ["Years later", "Decades after", "Five years following", "Ten years since", "A generation after"];
+                const timeGap = timeGaps[Math.min(sequelNumber - 1, timeGaps.length - 1)];
+                
+                const characterNames = returningCharacters.slice(0, 2).map(c => c.name);
+                const characterList = characterNames.length > 1 ? 
+                    `${characterNames.slice(0, -1).join(', ')} and ${characterNames[characterNames.length - 1]}` : 
+                    characterNames[0];
+                
+                return [
+                    `${timeGap}, when the horrors of ${setting.location} seemed like distant nightmares, ${characterList} believed they had found peace.`,
+                    `The scars had healed, but the memories remained. ${characterList} thought they had escaped the curse of ${setting.location} forever.`,
+                    `${timeGap} the massacre, ${characterList} had rebuilt their lives far from ${setting.location}, until fate dragged them back.`,
+                    `The survivors of ${setting.location} tried to forget, but some evils refuse to stay buried. Now ${characterList} must confront their past.`,
+                    `Just when ${characterList} believed the nightmare was over, ${setting.location} calls them back for an encore of terror.`
+                ];
+            }
+            
+            getOriginalOpenings(allCharacters, setting, event) {
+                const characterCount = allCharacters.length;
+                const leadCharacters = allCharacters.slice(0, Math.min(3, characterCount));
+                const characterNames = leadCharacters.map(c => c.name);
+                
+                return [
+                    `In ${setting.location}, ${setting.atmosphere}, ${characterNames.join(', ')} and their friends arrive for ${event}.`,
+                    `What begins as ${event} in ${setting.location} quickly becomes a nightmare for ${characterNames[0]} and the group.`,
+                    `${characterNames[0]} leads a group of ${characterCount} friends to ${setting.location} for ${event}, unaware of the danger lurking nearby.`,
+                    `The tranquil facade of ${setting.location} masks a sinister presence as ${characterNames.join(' and ')} organize ${event}.`,
+                    `${setting.location} seems perfect for ${event}, but ${characterNames[0]} and friends soon discover some places are better left undisturbed.`
+                ];
+            }
+            
+            generateUniqueConflict(firstVictim, deadCharacters, movie) {
+                const killerCount = (movie.killers && Array.isArray(movie.killers)) ? movie.killers.length : 1;
+                const victimName = firstVictim?.name || movie.firstVictim || (deadCharacters.length > 0 ? deadCharacters[0].name : 'someone');
+                
+                const conflictOptions = [
+                    `Terror strikes when ${victimName} becomes the first casualty of a merciless ${killerCount > 1 ? 'duo' : 'killer'}.`,
+                    `The bloodshed begins as ${victimName} falls victim to an unseen predator stalking the group.`,
+                    `When ${victimName} disappears without a trace, the remaining friends realize they're being hunted.`,
+                    `The peaceful gathering turns deadly as ${victimName} meets a gruesome fate at the hands of a masked ${killerCount > 1 ? 'pair' : 'murderer'}.`,
+                    `${victimName}'s brutal death serves as a chilling warning that no one is safe from the killer's wrath.`,
+                    `The nightmare escalates when ${victimName} becomes the opening act in a symphony of terror.`
+                ];
+                
+                return this.selectUnusedPhrase(conflictOptions);
+            }
+            
+            generateUniqueClimax(survivors, deadCharacters, movie) {
+                const survivorCount = survivors.length;
+                const deathCount = deadCharacters.length;
+                
+                if (survivorCount === 0) {
+                    const climaxOptions = [
+                        `In a devastating finale, evil triumphs completely, leaving no survivors to tell the tale.`,
+                        `The killer's masterpiece concludes with total annihilation, silencing every voice that could expose the truth.`,
+                        `As the final scream echoes through the night, the murderer completes their perfect game of elimination.`,
+                        `With methodical precision, the killer erases all witnesses, ensuring their secrets die with their victims.`
+                    ];
+                    return this.selectUnusedPhrase(climaxOptions);
+                } else if (survivorCount === 1) {
+                    const finalSurvivor = survivors[0].name;
+                    const climaxOptions = [
+                        `Only ${finalSurvivor} emerges from the carnage, forever changed by the horrors they've witnessed.`,
+                        `${finalSurvivor} stands alone against impossible odds in a final confrontation that will haunt them forever.`,
+                        `In a desperate bid for survival, ${finalSurvivor} must outwit death itself to see another dawn.`,
+                        `${finalSurvivor} becomes the sole witness to unspeakable evil, carrying the burden of ${deathCount} lost lives.`
+                    ];
+                    return this.selectUnusedPhrase(climaxOptions);
+                } else if (survivorCount === 2) {
+                    const survivor1 = survivors[0].name;
+                    const survivor2 = survivors[1].name;
+                    const climaxOptions = [
+                        `${survivor1} and ${survivor2} forge an unbreakable bond through shared trauma as they face the killer together.`,
+                        `United by terror and loss, ${survivor1} and ${survivor2} make their final stand against overwhelming evil.`,
+                        `${survivor1} and ${survivor2} must trust each other completely to survive the killer's twisted endgame.`,
+                        `Only ${survivor1} and ${survivor2} remain to piece together the truth behind the massacre.`
+                    ];
+                    return this.selectUnusedPhrase(climaxOptions);
+                } else {
+                    const leadSurvivors = survivors.slice(0, 2).map(s => s.name);
+                    const climaxOptions = [
+                        `Led by ${leadSurvivors.join(' and ')}, the remaining survivors band together for one last desperate fight.`,
+                        `${leadSurvivors.join(' and ')} rally the other survivors in a climactic battle that will determine who lives to see morning.`,
+                        `The ${survivorCount} survivors, guided by ${leadSurvivors[0]}'s determination, refuse to become the killer's final victims.`,
+                        `${leadSurvivors.join(' and ')} lead a group of traumatized survivors in their darkest hour.`
+                    ];
+                    return this.selectUnusedPhrase(climaxOptions);
+                }
+            }
+            
+            selectUnusedPhrase(options) {
+                // Filter out phrases that contain words/phrases we've used before
+                const availableOptions = options.filter(option => {
+                    const lowerOption = option.toLowerCase();
+                    return !Array.from(this.usedPhrases).some(phrase => 
+                        lowerOption.includes(phrase) || phrase.includes(lowerOption.substring(0, 15))
+                    );
+                });
+                
+                // If all options contain used phrases, pick the least similar one
+                const finalOptions = availableOptions.length > 0 ? availableOptions : options;
+                const selected = finalOptions[Math.floor(Math.random() * finalOptions.length)];
+                
+                // Track the new phrases from this selection
+                const newPhrases = this.extractKeyPhrases(selected);
+                newPhrases.forEach(phrase => this.usedPhrases.add(phrase.toLowerCase()));
+                
+                return selected;
+            }
+            
+            resetForNewFranchise() {
+                this.usedPhrases.clear();
+                this.sequelCounter = 0;
+            }
+        }
+        
+        // Initialize global synopsis AI
+        const synopsisAI = new SynopsisAI();
+
         // Setup functions
         function toggleCustomSetting() {
             const settingSelect = document.getElementById('movie-setting');
@@ -2597,6 +3496,9 @@
                         isReturning: false,
                         memory: new CharacterMemory(i)
                     };
+                    
+                    // Initialize AI personality system
+                    character.ai = new CharacterAI(character);
                     
                     // Calculate survival chance with memory system
                     character.survivalChance = calculateSurvivalChance(character.stats, character);
@@ -4789,6 +5691,10 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
             }
             
             // Fallback to campy dialogue moments
+            // Get most recent victim for death dialogue context
+            const recentVictim = gameState.characters.find(c => c.status === 'Dead');
+            const victimContext = recentVictim ? { victim: recentVictim.name } : {};
+            
             return [
                 {
                     event: `${char1.name} and ${char2.name} try to process the situation.`,
@@ -4796,7 +5702,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                         generateCampyDialogue(char1, 'terrified'),
                         generateCampyDialogue(char2, 'terrified'),
                         generateCampyDialogue(char1, 'suspicious'),
-                        generateCampyDialogue(char2, 'death')
+                        generateCampyDialogue(char2, 'death', victimContext)
                     ]
                 }
             ];
@@ -5938,7 +6844,7 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                         `"${victim.name}, I won't let you die in vain!" - ${reactor.name}, determined`,
                         `"We have to end this madness NOW!" - ${reactor.name}, rallying the others`
                     ];
-                    addEvent('dialogue', generateCampyDialogue(reactor, 'death'));
+                    addEvent('dialogue', generateCampyDialogue(reactor, 'death', { victim: victim.name }));
                 }
                 
                 // Add relationship reactions
@@ -6635,6 +7541,18 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
         }
         
         function generateFilmSynopsis(movie, filmNumber) {
+            // Use AI synopsis generator for enhanced, unique synopses
+            const previousSynopses = franchiseHistory.movies
+                .slice(0, filmNumber)
+                .map(m => m.customSynopsis || '')
+                .filter(s => s.length > 0);
+            
+            const aiSynopsis = synopsisAI.generateEnhancedSynopsis(movie, filmNumber, previousSynopses);
+            if (aiSynopsis && aiSynopsis.length > 50) {
+                return aiSynopsis;
+            }
+            
+            // Fallback to legacy system if AI fails
             const isSequel = filmNumber > 0;
             const allCharacters = movie.allCharacters || [];
             const deadCharacters = allCharacters.filter(c => c.status === 'Dead');
@@ -7249,6 +8167,18 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                     });
                 }
                 
+                // Initialize AI personality system for returning survivors
+                returningSurvivor.ai = new CharacterAI(returningSurvivor);
+                
+                // Update AI emotional state based on trauma
+                returningSurvivor.ai.updateEmotionalState({ 
+                    type: 'trauma', 
+                    intensity: returningSurvivor.legacyMemory.ptsdLevel 
+                });
+                returningSurvivor.ai.emotionalState.paranoid = Math.min(1.0, 
+                    returningSurvivor.ai.emotionalState.paranoid + returningSurvivor.legacyMemory.ptsdLevel
+                );
+                
                 gameState.characters.push(returningSurvivor);
             });
             
@@ -7314,8 +8244,12 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                     deathAct: null,
                     survivalChance: calculateSurvivalChance(archetype.stats),
                     edgic: { 1: 'UTR1', 2: 'UTR1', 3: 'UTR1' },
-                    isReturning: false
+                    isReturning: false,
+                    memory: new CharacterMemory(selectedSurvivors.length + i)
                 };
+                
+                // Initialize AI personality system for new characters
+                newCharacter.ai = new CharacterAI(newCharacter);
                 
                 gameState.characters.push(newCharacter);
             }
@@ -7399,6 +8333,10 @@ function setRelationship(char1Id, char2Id, relationshipKey) {
                 movies: [],
                 allCharacters: new Map()
             };
+            
+            // Reset AI systems for new franchise
+            synopsisAI.resetForNewFranchise();
+            globalDialogueHistory = [];
             
             document.getElementById('results-screen').classList.add('hidden');
             document.getElementById('movie-screen').classList.add('hidden');
